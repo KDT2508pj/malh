@@ -1,0 +1,57 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}질문 상세 - 말해뭐해{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="/static/css/interview/question_detail.css">
+{% endblock %}
+
+{% block content %}
+<div class="question-detail-wrapper">
+    <div class="container">
+        
+        <div id="mode-standby" class="mode-container active">
+            <div class="page-label-standby">질문 상세</div>
+
+            <div class="question-card">
+                <div class="question-number">Question 1</div>
+                <div class="question-text">자기소개를 간단하게 해주세요.</div>
+            </div>
+
+            <div class="record-area">
+                <div class="mic-circle" onclick="startRecordingFlow()">🎤</div>
+                <button class="record-btn" onclick="startRecordingFlow()">녹음하기</button>
+                <p class="record-guide">버튼을 누르면 마이크 권한 확인 후 녹음이 시작됩니다.</p>
+            </div>
+
+            <a href="/interviews/{{ session_id }}" class="back-link">← 질문 목록으로 돌아가기</a>
+        </div>
+
+        <div id="mode-recording" class="mode-container">
+            <div class="page-label-recording">🔴 녹음 중 (Recording)</div>
+
+            <div class="question-card" style="padding: 50px 40px; margin-bottom: 40px;">
+                <div class="question-number">Question 1</div>
+                <div class="question-text">자기소개를 간단하게 해주세요.</div>
+            </div>
+
+            <div class="recording-visual">
+                <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+                <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+            </div>
+
+            <div class="timer" id="timer">00:00</div>
+
+            <button class="stop-btn" onclick="finishRecording()">
+                <div class="stop-icon"></div>
+                녹음 완료
+            </button>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/interview/question_detail.js"></script>
+{% endblock %}

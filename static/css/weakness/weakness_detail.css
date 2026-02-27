@@ -1,0 +1,80 @@
+/* Weakness Detail Page Specific Styles */
+
+.weakness-detail-wrapper {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 60px 20px;
+    width: 100%;
+}
+
+.container { width: 100%; max-width: 700px; text-align: center; }
+
+/* 공통 질문 카드 */
+.question-card {
+    background: #fff; border-radius: 20px; padding: 60px 40px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.05); border: 1px solid #eee;
+    margin-bottom: 40px; transition: all 0.3s;
+}
+.question-number { font-size: 20px; font-weight: 700; color: var(--primary-orange); margin-bottom: 20px; }
+.question-text { font-size: 32px; font-weight: 700; color: var(--text-main); line-height: 1.4; word-break: keep-all; }
+
+/* Standby Mode */
+.page-label-standby {
+    font-size: 18px; font-weight: 600; color: var(--primary-navy); margin-bottom: 40px;
+    display: inline-block; border-bottom: 2px solid var(--primary-navy); padding-bottom: 5px;
+}
+.record-area { display: flex; flex-direction: column; align-items: center; gap: 20px; }
+.mic-circle {
+    width: 100px; height: 100px; background-color: #fff; border: 2px solid #eee; border-radius: 50%;
+    display: flex; justify-content: center; align-items: center; font-size: 40px; color: var(--text-sub);
+    cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+}
+.mic-circle:hover { border-color: var(--primary-orange); color: var(--primary-orange); transform: scale(1.05); }
+.record-btn {
+    background-color: var(--primary-navy); color: #fff; padding: 15px 50px; border-radius: 50px;
+    font-size: 18px; font-weight: 700; border: none; cursor: pointer; box-shadow: 0 4px 10px rgba(15, 53, 104, 0.2);
+}
+.record-guide { margin-top: 10px; font-size: 14px; color: var(--text-sub); }
+.back-link { display: inline-block; margin-top: 40px; color: #888; text-decoration: underline; }
+.back-link:hover { color: var(--primary-navy); }
+
+/* Recording Mode */
+.page-label-recording {
+    font-size: 18px; font-weight: 600; color: #E02020; margin-bottom: 40px;
+    display: inline-flex; align-items: center; gap: 8px; animation: blink 2s infinite;
+}
+@keyframes blink { 50% { opacity: 0.6; } }
+
+/* Wave Animation */
+.recording-visual { height: 120px; display: flex; justify-content: center; align-items: center; gap: 6px; margin-bottom: 30px; }
+.wave-bar { width: 8px; background-color: var(--primary-navy); border-radius: 4px; animation: wave 1s ease-in-out infinite; }
+@keyframes wave {
+    0%, 100% { height: 30px; opacity: 0.5; }
+    50% { height: 100px; opacity: 1; background-color: var(--primary-orange); }
+}
+
+/* Wave Bar Delays */
+.wave-bar:nth-child(1) { height: 40px; animation-delay: 0.0s; }
+.wave-bar:nth-child(2) { height: 60px; animation-delay: 0.1s; }
+.wave-bar:nth-child(3) { height: 90px; animation-delay: 0.2s; }
+.wave-bar:nth-child(4) { height: 50px; animation-delay: 0.3s; }
+.wave-bar:nth-child(5) { height: 80px; animation-delay: 0.4s; }
+.wave-bar:nth-child(6) { height: 40px; animation-delay: 0.5s; }
+.wave-bar:nth-child(7) { height: 70px; animation-delay: 0.4s; }
+.wave-bar:nth-child(8) { height: 100px; animation-delay: 0.3s; }
+.wave-bar:nth-child(9) { height: 60px; animation-delay: 0.2s; }
+.wave-bar:nth-child(10) { height: 40px; animation-delay: 0.1s; }
+
+.timer { font-size: 36px; font-weight: 700; color: var(--text-main); margin-bottom: 30px; }
+.stop-btn {
+    background-color: #E02020; color: #fff; padding: 15px 50px; border-radius: 50px;
+    font-size: 18px; font-weight: 700; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 10px;
+}
+.stop-icon { width: 16px; height: 16px; background-color: #fff; border-radius: 2px; }
+
+/* Helpers */
+.mode-container { display: none; }
+.mode-container.active { display: block; animation: fadeIn 0.3s ease-out; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }

@@ -1,0 +1,28 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}이력서 분석 중 - 말해뭐해{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="/static/css/resume/resume_wait.css">
+{% endblock %}
+
+{% block content %}
+<div class="resume-wait-wrapper">
+    <div class="wait-container">
+        <div class="analyzing-icon">📄🔍</div>
+        
+        <h2 class="status-text">이력서를 분석 중입니다...</h2>
+        <p class="sub-text">AI가 직무 적합성과 예상 질문을 추출하고 있습니다.</p>
+
+        <div class="progress-wrapper">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+        
+        <div class="percentage" id="percentageText">0%</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/resume/resume_wait.js"></script>
+{% endblock %}

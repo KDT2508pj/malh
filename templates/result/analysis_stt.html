@@ -1,0 +1,135 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}정밀 분석 결과(STT 통합) - 말해뭐해{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="/static/css/result/analysis_stt.css">
+{% endblock %}
+
+{% block content %}
+<div class="analysis-stt-wrapper">
+    <div class="container">
+        <div class="page-header">
+            <h2 class="page-title">정밀 분석 결과 (STT)</h2>
+        </div>
+
+        <div class="score-grid">
+            <div class="score-card">
+                <div class="chart-circle c-fluency"><span class="score-value">88.1</span></div>
+                <div class="score-label">유창성 점수</div>
+            </div>
+            <div class="score-card">
+                <div class="chart-circle c-clarity"><span class="score-value">84.2</span></div>
+                <div class="score-label">명료성 점수</div>
+            </div>
+            <div class="score-card">
+                <div class="chart-circle c-structure"><span class="score-value">82.4</span></div>
+                <div class="score-label">발화 구조 점수</div>
+            </div>
+            <div class="score-card">
+                <div class="chart-circle c-length"><span class="score-value">86.5</span></div>
+                <div class="score-label">답변 길이 점수</div>
+            </div>
+        </div>
+
+        <div class="llm-section">
+            <div class="report-box analysis">
+                <h3 class="report-header analysis">분석 리포트</h3>
+                <div class="report-content">
+                    <p>본 답변은 전반적으로 안정적인 발화 흐름과 높은 전달 명료성을 나타내는 상태입니다.</p>
+                    <p>발화 속도와 속도 변동이 적정 범위에 위치하여 일정한 말하기 리듬이 유지된 상태이며, 머뭇거림과 반복어가 거의 발생하지 않아 발화 연속성이 안정적입니다.</p>
+                    <p>다만, 평균 12초 이상의 침묵 구간이 존재하여 사고 정리 과정에서 일시적 발화 중단 구간이 일부 확인되는 상태입니다.</p>
+                    <p>STT 정확도, 발음 분명도, 조음 비율, 음량 안정성 지표가 모두 안정 범위에 해당하여 음성 전달 선명도가 높습니다.</p>
+                </div>
+            </div>
+
+            <div class="report-box coaching">
+                <h3 class="report-header coaching">코칭 피드백</h3>
+                <div class="report-content">
+                    <p><strong>1. 침묵 구간 단축:</strong> 장시간 침묵 구간이 발생하는 특성이 확인되므로, 발화 시작 전 핵심 키워드를 먼저 말하는 방식(두괄식)으로 발화 진입 지연을 단축하는 훈련이 필요합니다.</p>
+                    <p><strong>2. 발성 안정성:</strong> 안정성 향상을 위해 문장 시작과 종료 구간의 발성 강도를 일정하게 유지하는 호흡 및 발성 패턴 제어 훈련을 권장합니다.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="metrics-container">
+            <div class="category-column">
+                <div class="category-header fluency-title"><span>🗣️ 유창성 (Fluency)</span></div>
+                <div class="metric-list">
+                    <div class="metric-item">
+                        <div class="metric-label-group">
+                            <span class="metric-label">발화 속도</span><div class="help-icon" title="1분당 단어 수(WPM)">i</div>
+                        </div>
+                        <span class="metric-value">44.6 <span class="metric-sub">wpm</span></span>
+                    </div>
+                    <div class="metric-item">
+                        <div class="metric-label-group">
+                            <span class="metric-label">침묵 총합</span><div class="help-icon" title="전체 침묵 시간 합계">i</div>
+                        </div>
+                        <span class="metric-value">24.78s</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="category-column">
+                <div class="category-header clarity-title"><span>🎙️ 명료성 (Clarity)</span></div>
+                <div class="metric-list">
+                    <div class="metric-item">
+                        <div class="metric-label-group">
+                            <span class="metric-label">STT 정확도</span><div class="help-icon" title="음성 인식 정확도">i</div>
+                        </div>
+                        <span class="metric-value">0.91</span>
+                    </div>
+                    <div class="metric-item">
+                        <div class="metric-label-group">
+                            <span class="metric-label">발음 분명도</span><div class="help-icon" title="발음의 명확성">i</div>
+                        </div>
+                        <span class="metric-value">0.872</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="analysis-section">
+            <div class="section-card">
+                <div class="card-header header-structure"><span>🏗️ 발화 구조 (Structure)</span></div>
+                <div class="metrics-grid">
+                    <div class="metric-box">
+                        <div class="metric-label">문장 수</div>
+                        <div class="metric-value">20</div>
+                    </div>
+                    <div class="metric-box">
+                        <div class="metric-label">의미 단위 분절</div>
+                        <div class="metric-value">총 6</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-card">
+                <div class="card-header header-length"><span>⏱️ 답변 길이 평가</span></div>
+                <div class="length-status-box">
+                    <span class="status-icon">✅</span>
+                    <div class="status-text">적정 범위</div>
+                </div>
+                <ul class="length-detail-list">
+                    <li class="length-detail-item">
+                        <span class="ld-label">총 단어 수</span><span class="ld-value">82자</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="next-btn-area">
+            <button class="next-btn" onclick="location.href='/interviews/{{ session_id }}/results/{{ sel_id }}/analysis'">
+                다음 단계 (텍스트 분석) &gt;
+            </button>
+        </div>
+
+        <a href="#" class="back-link" onclick="scrollToTop(); return false;">맨 위로 이동</a>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/result/analysis_stt.js"></script>
+{% endblock %}

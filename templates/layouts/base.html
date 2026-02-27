@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}말해뭐해{% endblock %}</title>
+  <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css"/>
+  <link rel="stylesheet" href="/static/css/common/main.css" />
+  {% block head %}{% endblock %}
+</head>
+<body>
+  <header>
+    <div class="logo-container" onclick="location.href='/'">
+        <img src="/static/img/malh_logo.png" alt="말해뭐해" class="logo-img">
+    </div>
+    <nav>
+        <ul>
+            <li><a href="/" class="{% if request.url.path == '/' %}active{% endif %}">홈</a></li>
+            <li><a href="#">서비스 소개</a></li>
+            <li><a href="#">이용 방법</a></li>
+            <li><a href="#">문의하기</a></li>
+        </ul>
+    </nav>
+    <div class="auth-links">
+        {% block auth_links %}
+        <a href="/auth/login">로그인</a>
+        <a href="/auth/agree" class="btn-signup">회원가입</a>
+        {% endblock %}
+    </div>
+  </header>
+
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer>
+    <div class="footer-content">
+        <div class="footer-logo"><span>💬</span> 말해뭐해</div>
+        <div class="footer-links">
+            <a href="#">서비스 이용약관</a>
+            <a href="#">개인정보 처리방침</a>
+            <a href="#">고객센터</a>
+        </div>
+        <p class="copyright">© 2026 말해뭐해. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="/static/js/common/main.js"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

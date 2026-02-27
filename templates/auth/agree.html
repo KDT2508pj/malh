@@ -1,0 +1,86 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}약관 동의 - 말해뭐해{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="/static/css/auth/agree.css">
+{% endblock %}
+
+{% block content %}
+<div class="agree-container-wrapper">
+    <div class="agree-container">
+        <div class="step-indicator">
+            <div class="step active">1. 약관동의</div>
+            <div class="step-line"></div>
+            <div class="step">2. 정보입력</div>
+            <div class="step-line"></div>
+            <div class="step">3. 가입완료</div>
+        </div>
+
+        <div class="agree-header">
+            <h2>서비스 이용약관 동의</h2>
+            <p>말해뭐해 서비스 이용을 위해 약관에 동의해주세요.</p>
+        </div>
+
+        <div class="check-all-box">
+            <label>
+                <input type="checkbox" id="checkAll">
+                <span class="check-text">전체 동의하기</span>
+            </label>
+            <p class="sub-text">실명인증을 포함하여 아래 모든 약관에 동의합니다.</p>
+        </div>
+
+        <div class="terms-list">
+            <div class="term-item">
+                <div class="term-title-row">
+                    <label>
+                        <input type="checkbox" class="required">
+                        <span class="check-text">[필수] 이용약관 동의</span>
+                    </label>
+                    <button type="button" class="view-btn" onclick="openModal('service')">보기</button>
+                </div>
+            </div>
+
+            <div class="term-item">
+                <div class="term-title-row">
+                    <label>
+                        <input type="checkbox" class="required">
+                        <span class="check-text">[필수] 개인정보 수집 및 이용 동의</span>
+                    </label>
+                    <button type="button" class="view-btn" onclick="openModal('privacy')">보기</button>
+                </div>
+            </div>
+
+            <div class="term-item">
+                <div class="term-title-row">
+                    <label>
+                        <input type="checkbox">
+                        <span class="check-text">[선택] 마케팅 정보 수신 동의</span>
+                    </label>
+                    <button type="button" class="view-btn" onclick="openModal('marketing')">보기</button>
+                </div>
+            </div>
+        </div>
+
+        <button type="button" class="next-btn" id="nextBtn" disabled onclick="goToNextStep()">다음 단계로 이동</button>
+    </div>
+</div>
+
+<!-- Modal -->
+<div id="termsModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="modalTitle">약관 상세</h3>
+            <span class="close-btn" onclick="closeModal()">&times;</span>
+        </div>
+        <div class="modal-body" id="modalBody"></div>
+        <div class="modal-footer">
+            <button class="confirm-btn" onclick="closeModal()">확인</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/auth/agree.js"></script>
+{% endblock %}

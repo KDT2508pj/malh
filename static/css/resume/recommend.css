@@ -1,0 +1,63 @@
+/* Resume Feedback Page Specific Styles */
+
+.feedback-container-wrapper {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    padding: 60px 20px;
+}
+
+.container { width: 100%; max-width: 800px; }
+
+.content-card {
+    background-color: var(--white);
+    padding: 50px 40px;
+    border-radius: 24px;
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 30px;
+}
+
+.section-title { font-size: 28px; font-weight: 800; color: var(--primary-navy); text-align: center; margin-bottom: 15px; }
+.section-desc { text-align: center; color: var(--text-sub); margin-bottom: 40px; }
+
+/* Form Styles */
+.form-group { margin-bottom: 25px; }
+.form-group label { display: block; font-size: 15px; font-weight: 700; color: #444; margin-bottom: 10px; }
+select, input[type="text"] {
+    width: 100%; height: 55px; padding: 0 20px; border: 1px solid var(--border-color);
+    border-radius: 12px; font-size: 16px; outline: none; background-color: #fff;
+}
+select:focus, input:focus { border-color: var(--primary-navy); }
+
+.analyze-btn {
+    width: 100%; height: 60px; background-color: var(--primary-orange); color: #fff;
+    border: none; border-radius: 12px; font-size: 18px; font-weight: 700; cursor: pointer;
+    transition: all 0.2s; margin-top: 20px;
+}
+.analyze-btn:hover { background-color: var(--primary-orange-light); transform: translateY(-2px); box-shadow: 0 5px 15px rgba(255,107,0,0.2); }
+
+/* Loading Style */
+.loading-container { text-align: center; padding: 40px 0; }
+.spinner {
+    width: 50px; height: 50px; border: 5px solid #f3f3f3; border-top: 5px solid var(--primary-orange);
+    border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 30px;
+}
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+/* Result Style */
+.match-score-box { text-align: center; margin-bottom: 40px; }
+.score-label { font-size: 18px; font-weight: 600; color: var(--text-sub); margin-bottom: 10px; }
+.score-value { font-size: 72px; font-weight: 900; color: var(--primary-navy); }
+.score-value span { font-size: 24px; font-weight: 700; margin-left: 5px; }
+
+.feedback-box { padding: 25px; border-radius: 16px; margin-bottom: 20px; }
+.feedback-box h4 { font-size: 18px; font-weight: 700; margin-bottom: 12px; }
+.feedback-box p { font-size: 16px; line-height: 1.7; color: #444; }
+
+.feedback-box.good { background-color: #f0fdf4; border: 1px solid #dcfce7; color: #166534; }
+.feedback-box.bad { background-color: #fef2f2; border: 1px solid #fee2e2; color: #991b1b; }
+
+.btn-group { display: flex; gap: 15px; margin-top: 40px; }
+.btn { flex: 1; height: 55px; border-radius: 12px; font-size: 17px; font-weight: 700; cursor: pointer; border: none; }
+.btn-retry { background-color: #f1f3f5; color: var(--text-main); }
+.btn-practice { background-color: var(--primary-navy); color: #fff; }

@@ -1,0 +1,66 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}예상 질문 - 말해뭐해{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="/static/css/interview/question.css">
+{% endblock %}
+
+{% block content %}
+<div class="question-container-wrapper">
+    <div class="container">
+        <div class="page-header">
+            <h2 class="page-title">예상 질문</h2>
+            <p class="page-desc">AI가 이력서를 분석하여 생성한 예상 질문입니다.<br>각 질문을 클릭하여 답변을 녹음하세요.</p>
+        </div>
+
+        <div class="question-list">
+            <div class="question-card" onclick="goToDetail(1)">
+                <div class="q-content">
+                    <div class="q-number">1</div>
+                    <div class="q-text">자기소개를 간단하게 해주세요.</div>
+                </div>
+                <div class="q-status done">✔ 녹음 완료</div>
+            </div>
+
+            <div class="question-card" onclick="goToDetail(2)">
+                <div class="q-content">
+                    <div class="q-number">2</div>
+                    <div class="q-text">우리 회사에 지원하게 된 동기는 무엇인가요?</div>
+                </div>
+                <div class="q-status">대기 중 &gt;</div>
+            </div>
+
+            <div class="question-card" onclick="goToDetail(3)">
+                <div class="q-content">
+                    <div class="q-number">3</div>
+                    <div class="q-text">직무와 관련된 본인의 강점은 무엇인가요?</div>
+                </div>
+                <div class="q-status">대기 중 &gt;</div>
+            </div>
+
+            <div class="question-card" onclick="goToDetail(4)">
+                <div class="q-content">
+                    <div class="q-number">4</div>
+                    <div class="q-text">가장 힘들었던 프로젝트 경험과 해결 방법을 말해주세요.</div>
+                </div>
+                <div class="q-status">대기 중 &gt;</div>
+            </div>
+
+            <div class="question-card" onclick="goToDetail(5)">
+                <div class="q-content">
+                    <div class="q-number">5</div>
+                    <div class="q-text">입사 후 이루고 싶은 목표가 있나요?</div>
+                </div>
+                <div class="q-status">대기 중 &gt;</div>
+            </div>
+        </div>
+
+        <button class="submit-btn" onclick="submitAnswers()">제출하기</button>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/interview/question.js"></script>
+{% endblock %}

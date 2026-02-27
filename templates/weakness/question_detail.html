@@ -1,0 +1,63 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}약점 보강 상세 - 말해뭐해{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="/static/css/weakness/weakness_detail.css">
+{% endblock %}
+
+{% block content %}
+<div class="weakness-detail-wrapper">
+    <div class="container">
+        
+        <div id="mode-standby" class="mode-container active">
+            <div class="page-label-standby">약점 보강 상세</div>
+
+            <div class="question-card">
+                <div class="question-number">Weakness Q1</div>
+                <div class="question-text">
+                    해당 문제를 해결하는 과정에서 팀원들과 의견 충돌은 없었나요?<br>
+                    있었다면, 구체적으로 어떻게 의견을 조율했는지 말씀해 주세요.
+                </div>
+            </div>
+
+            <div class="record-area">
+                <div class="mic-circle" onclick="startRecordingFlow()">🎤</div>
+                <button class="record-btn" onclick="startRecordingFlow()">녹음하기</button>
+                <p class="record-guide">버튼을 누르면 마이크 권한 확인 후 녹음이 시작됩니다.</p>
+            </div>
+
+            <a href="/interviews/{{ session_id }}/weakness" class="back-link">← 약점 보강 리스트로 돌아가기</a>
+        </div>
+
+        <div id="mode-recording" class="mode-container">
+            <div class="page-label-recording">🔴 보강 녹음 중 (Reinforcement)</div>
+
+            <div class="question-card" style="padding: 50px 40px; margin-bottom: 40px;">
+                <div class="question-number">Weakness Q1</div>
+                <div class="question-text">
+                    해당 문제를 해결하는 과정에서 팀원들과 의견 충돌은 없었나요?<br>
+                    있었다면, 구체적으로 어떻게 의견을 조율했는지 말씀해 주세요.
+                </div>
+            </div>
+
+            <div class="recording-visual">
+                <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+                <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+            </div>
+
+            <div class="timer" id="timer">00:00</div>
+
+            <button class="stop-btn" onclick="finishRecording()">
+                <div class="stop-icon"></div>
+                녹음 완료
+            </button>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/weakness/weakness_detail.js"></script>
+{% endblock %}

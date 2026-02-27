@@ -1,0 +1,103 @@
+{% extends "layouts/base.html" %}
+{% block title %}답변 분석(텍스트 통합) - 말해뭐해{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="/static/css/result/analysis_text.css">
+{% endblock %}
+{% block content %}
+<header>
+        <div class="logo-container" onclick="location.href='/'">
+            <img src="/static/img/malh_logo.png" alt="말해뭐해" class="logo-img">
+        </div>
+        <nav>
+            <ul>
+                <li><a href="/">메인</a></li>
+                <li><a href="/resumes" style="color: var(--primary-orange);">마이 페이지</a></li>
+                <li><a href="/resumes/{{ resume_id }}/feedback">이력서 피드백</a></li>
+            </ul>
+        </nav>
+        <div class="user-info">
+            <span>○○○님</span> | <a href="/" class="logout-btn">로그아웃</a>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <div class="detail-header">
+                <div class="file-info">
+                    <h2><span class="file-icon">📄</span> 이력서 1.pdf</h2>
+                    <div class="file-meta">2026-02-19 업로드 | 2.5MB</div>
+                </div>
+                <button class="weakness-btn" onclick="goToWeakness()">
+                    약점 보강하기 ▶
+                </button>
+            </div>
+
+            <div class="tab-nav">
+                <div class="tab-item active" onclick="switchTab('score', this)">점수</div>
+                <div class="tab-item" onclick="switchTab('analysis', this)">분석</div>
+            </div>
+
+            <div id="tab-score" class="tab-content active">
+                <div class="score-list-container">
+                    <div class="score-item">
+                        <div class="item-header"><span class="item-label">질문-답변 맥락 적합</span><span class="item-value val-low">59점</span></div>
+                        <div class="progress-bg"><div class="progress-bar bar-low" style="width: 59%;"></div></div>
+                    </div>
+                    <div class="score-item">
+                        <div class="item-header"><span class="item-label">질문이 요구하는 요소 적합</span><span class="item-value val-mid">65점</span></div>
+                        <div class="progress-bg"><div class="progress-bar bar-mid" style="width: 65%;"></div></div>
+                    </div>
+                    <div class="score-item">
+                        <div class="item-header"><span class="item-label">구체성</span><span class="item-value val-high">80점</span></div>
+                        <div class="progress-bg"><div class="progress-bar bar-high" style="width: 80%;"></div></div>
+                    </div>
+                    <div class="score-item">
+                        <div class="item-header"><span class="item-label">근거 제시</span><span class="item-value val-high">87점</span></div>
+                        <div class="progress-bg"><div class="progress-bar bar-high" style="width: 87%;"></div></div>
+                    </div>
+                    <div class="score-item">
+                        <div class="item-header"><span class="item-label">이력서 적합성</span><span class="item-value val-high">90점</span></div>
+                        <div class="progress-bg"><div class="progress-bar bar-high" style="width: 90%;"></div></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tab-analysis" class="tab-content">
+                <div class="analysis-content">
+                    <div class="feedback-card">
+                        <h3 class="card-header header-good">👍 좋은 점 (Good)</h3>
+                        <ul class="feedback-list">
+                            <li class="feedback-item good"><strong>구체적인 수치 제시:</strong> "처리 지연 시간을 절반 수준으로 감소시켰다"는 정량적인 성과를 제시하여 답변의 신뢰도를 높였습니다. (구체성 점수 80점 반영)</li>
+                            <li class="feedback-item good"><strong>명확한 문제 정의:</strong> 비동기 처리 구조의 문제점을 기술적인 용어로 명확하게 정의했습니다.</li>
+                        </ul>
+                        <div class="divider"></div>
+                        <h3 class="card-header header-bad">👎 아쉬운 점 (Improvement)</h3>
+                        <ul class="feedback-list">
+                            <li class="feedback-item bad"><strong>질문 의도와의 괴리:</strong> 질문은 "가장 어려웠던 문제 상황"을 묻고 있으나, 답변은 기술적 해결책에만 집중되어 있어 당시 상황의 '어려움'이나 '난관'에 대한 묘사가 부족합니다. (맥락 적합성 59점 반영)</li>
+                            <li class="feedback-item bad"><strong>협업 과정 누락:</strong> 해당 문제를 해결하는 과정에서 팀원들과 어떻게 소통했는지에 대한 내용이 없어, 직무 적합성 측면에서 아쉬움이 남습니다.</li>
+                        </ul>
+                    </div>
+
+                    <div class="feedback-card">
+                        <h3 class="card-header header-revised">✨ AI가 제안하는 수정 답변</h3>
+                        <p class="revised-info">맥락 적합성을 보완하고, 문제 해결 과정의 구체성을 높인 답변입니다.</p>
+                        <div class="revised-box">
+                            <div class="revised-text">
+                                "가장 어려웠던 경험은 대규모 로그 데이터 처리 시스템 구축 당시 발생한 <span class="highlight">예상치 못한 데이터 병목 현상</span>이었습니다. <br><br>
+                                초기 설계 단계에서 비동기 처리 구조를 적용했음에도 트래픽 급증 시 지연이 발생했고, 이는 서비스 안정성에 큰 위협이 되었습니다. 단순한 기술적 최적화를 넘어, 팀원들과 함께 전체 아키텍처를 재검토하는 과정이 필요했습니다. <br><br>
+                                저는 주도적으로 메시지 큐 도입을 제안하고, 병렬 처리 단계를 세분화하는 리팩토링을 진행했습니다. 이 과정에서 팀 내 의견 조율이 쉽지 않았으나, 데이터 기반의 성능 테스트 결과를 공유하며 팀을 설득했습니다. 결과적으로 <span class="highlight">지연 시간을 50% 단축</span>하고 시스템 안정성을 확보할 수 있었습니다."
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <a href="/interviews/{{ session_id }}/results" class="back-link">← 분석 결과 목록으로</a>
+        </div>
+    </main>
+
+    <footer>© 2026 말해뭐해. All rights reserved.</footer>
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/result/analysis_text.js"></script>
+{% endblock %}

@@ -1,0 +1,36 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}약점 보강 생성 중 - 말해뭐해{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="/static/css/weakness/weakness_wait.css">
+{% endblock %}
+
+{% block content %}
+<div class="wait-container-wrapper">
+    <div class="wait-container">
+        <div class="icon-wrapper">
+            <div class="ripple"></div>
+            <div class="ripple"></div>
+            <div class="target-icon">🎯</div>
+        </div>
+        
+        <h2 class="status-title">약점 보강 질문을 생성하고 있습니다...</h2>
+        
+        <p class="status-desc">
+            이전 답변에서 분석된 부족한 부분(맥락 적합성, 구체성)을<br>
+            집중적으로 연습할 수 있는 맞춤형 질문을 준비 중입니다.
+        </p>
+
+        <div class="progress-wrapper">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+        
+        <div class="percentage" id="percentageText">0%</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/weakness/weakness_wait.js"></script>
+{% endblock %}

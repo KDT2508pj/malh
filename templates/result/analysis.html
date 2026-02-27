@@ -1,0 +1,56 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}답변 분석 통합 - 말해뭐해{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="/static/css/result/answer_analysis.css">
+{% endblock %}
+
+{% block content %}
+<div class="analysis-container-wrapper">
+    <div class="analysis-container">
+        <div class="icon-area">
+            
+            <div id="icon-step-1" class="stage-icon active">
+                <div class="voice-icon-wrapper">
+                    <div class="v-bar"></div><div class="v-bar"></div><div class="v-bar"></div><div class="v-bar"></div><div class="v-bar"></div>
+                </div>
+            </div>
+
+            <div id="icon-step-2" class="stage-icon">
+                <div class="stt-icon-wrapper">
+                    <div class="text-line"></div><div class="text-line"></div><div class="text-line"></div><div class="text-line"></div>
+                </div>
+            </div>
+
+            <div id="icon-step-3" class="stage-icon">
+                <div class="text-scan-wrapper">
+                    <div class="document-icon">
+                        <div class="doc-line"></div><div class="doc-line"></div><div class="doc-line"></div><div class="doc-line"></div><div class="doc-line"></div>
+                        <div class="scan-beam"></div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+        
+        <h2 class="status-title" id="statusTitle">AI가 음성을 분석하고 있습니다...</h2>
+        <p class="status-desc" id="statusDesc">음성파일을 분석하여 유창성, 명료성 등을 평가하고 있어요.</p>
+
+        <div class="progress-wrapper">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+        <div class="percentage" id="percentageText">0%</div>
+
+        <div class="step-indicator">
+            <div id="dot-1" class="step-dot active"></div>
+            <div id="dot-2" class="step-dot"></div>
+            <div id="dot-3" class="step-dot"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/result/answer_analysis.js"></script>
+{% endblock %}

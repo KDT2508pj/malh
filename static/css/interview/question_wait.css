@@ -1,0 +1,72 @@
+/* Interview Wait Page Specific Styles */
+
+.wait-container-wrapper {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 60px 20px;
+}
+
+.wait-container {
+    text-align: center;
+    background: #fff;
+    padding: 80px 60px;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+    width: 100%;
+    max-width: 600px;
+}
+
+/* 아이콘 애니메이션 */
+.thinking-icon {
+    font-size: 60px;
+    color: var(--primary-orange);
+    margin-bottom: 30px;
+    display: inline-block;
+    animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+    0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+    40% { transform: translateY(-10px); }
+    60% { transform: translateY(-5px); }
+}
+
+.status-text {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--primary-navy);
+    margin-bottom: 15px;
+}
+
+.sub-text {
+    font-size: 16px;
+    color: var(--text-sub);
+    margin-bottom: 40px;
+}
+
+/* 프로그레스 바 */
+.progress-wrapper {
+    width: 100%;
+    background-color: #eee;
+    border-radius: 10px;
+    height: 12px;
+    overflow: hidden;
+    position: relative;
+    margin-bottom: 15px;
+}
+
+.progress-bar {
+    height: 100%;
+    background-color: var(--primary-orange);
+    width: 0%;
+    border-radius: 10px;
+    transition: width 0.4s ease;
+}
+
+.percentage {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--primary-orange);
+}

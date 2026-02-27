@@ -1,0 +1,40 @@
+/* Weakness Wait Page Specific Styles */
+
+.wait-container-wrapper {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 60px 20px;
+}
+
+.wait-container {
+    text-align: center; background: #fff; padding: 80px 60px;
+    border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+    width: 100%; max-width: 600px;
+}
+
+/* [Icon Animations] */
+.icon-wrapper { margin-bottom: 30px; position: relative; height: 80px; display: flex; justify-content: center; align-items: center; }
+.target-icon { font-size: 60px; z-index: 2; animation: pulse 1.5s infinite ease-in-out; }
+.ripple {
+    position: absolute; width: 60px; height: 60px; background-color: var(--primary-orange);
+    border-radius: 50%; opacity: 0; z-index: 1; animation: ripple-effect 1.5s infinite ease-out;
+}
+.ripple:nth-child(2) { animation-delay: 0.5s; }
+
+@keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+@keyframes ripple-effect { 0% { transform: scale(0.8); opacity: 0.5; } 100% { transform: scale(2.5); opacity: 0; } }
+
+.status-title { font-size: 26px; font-weight: 700; color: var(--primary-navy); margin-bottom: 15px; }
+.status-desc { font-size: 16px; color: var(--text-sub); margin-bottom: 40px; line-height: 1.5; }
+
+/* [Progress Bar with Stripe Animation] */
+.progress-wrapper { width: 100%; background-color: #eee; border-radius: 10px; height: 12px; overflow: hidden; position: relative; margin-bottom: 15px; }
+.progress-bar {
+    height: 100%; background-color: var(--primary-orange); width: 0%; border-radius: 10px; transition: width 0.4s ease;
+    background-image: linear-gradient(45deg, rgba(255, 255, 255, 0.2) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.2) 50%, rgba(255, 255, 255, 0.2) 75%, transparent 75%, transparent);
+    background-size: 40px 40px; animation: stripe-move 1s linear infinite;
+}
+@keyframes stripe-move { 0% { background-position: 0 0; } 100% { background-position: 40px 0; } }
+.percentage { font-size: 18px; font-weight: 800; color: var(--primary-orange); }

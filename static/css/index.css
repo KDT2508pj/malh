@@ -1,0 +1,79 @@
+/* Index Page Specific Styles */
+
+/* Hero Section */
+.hero-section {
+    background: linear-gradient(135deg, var(--primary-navy) 0%, var(--primary-navy-dark) 100%);
+    color: var(--white); padding: 100px 40px 140px;
+    display: flex; justify-content: center; align-items: center;
+    position: relative; overflow: hidden;
+}
+.hero-section::before {
+    content: ''; position: absolute; top: -50px; right: -50px; width: 300px; height: 300px;
+    background: radial-gradient(circle, rgba(255,107,0,0.2) 0%, rgba(255,107,0,0) 70%);
+    border-radius: 50%;
+}
+.hero-container {
+    max-width: 1200px; width: 100%; display: flex; align-items: center; justify-content: space-between; z-index: 1;
+}
+.hero-content { max-width: 50%; }
+.hero-title { font-size: 54px; font-weight: 800; line-height: 1.2; margin-bottom: 24px; }
+.hero-highlight { color: var(--primary-orange); }
+.hero-desc { font-size: 20px; margin-bottom: 40px; opacity: 0.9; }
+.btn-hero {
+    display: inline-block; background-color: var(--primary-orange); color: var(--white);
+    padding: 18px 40px; border-radius: 40px; font-size: 18px; font-weight: 700;
+    box-shadow: 0 10px 20px rgba(255, 107, 0, 0.3); transition: all 0.3s;
+}
+.btn-hero:hover {
+    background-color: var(--primary-orange-light); transform: translateY(-3px);
+    box-shadow: 0 15px 25px rgba(255, 107, 0, 0.4);
+}
+.hero-image {
+    width: 45%; max-width: 500px; height: 400px; background-color: #ddd;
+    border-radius: 20px; box-shadow: var(--shadow-md);
+    background-image: url('https://placehold.co/500x400/0A254A/FFFFFF?text=AI+Interview+Coach');
+    background-size: cover; background-position: center;
+}
+
+/* Features Section */
+.features-section {
+    padding: 100px 40px; background-color: var(--bg-light); position: relative;
+    margin-top: -80px;
+    z-index: 10;
+}
+.section-container { max-width: 1200px; margin: 0 auto; }
+.section-title {
+    text-align: center; font-size: 36px; font-weight: 800; color: var(--primary-navy);
+    margin-bottom: 60px;
+}
+.section-title span { color: var(--primary-orange); }
+
+.features-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 30px;
+}
+.feature-card {
+    background-color: var(--white); padding: 40px; border-radius: 24px;
+    box-shadow: var(--shadow-sm); transition: all 0.3s; border: 1px solid transparent;
+    display: flex; flex-direction: column; align-items: flex-start;
+}
+.feature-card:hover {
+    transform: translateY(-10px); box-shadow: var(--shadow-md);
+    border-color: rgba(255, 107, 0, 0.2);
+}
+.feature-icon {
+    width: 60px; height: 60px; background-color: rgba(255, 107, 0, 0.1);
+    color: var(--primary-orange); border-radius: 16px; display: flex;
+    align-items: center; justify-content: center; font-size: 30px; margin-bottom: 24px;
+}
+.feature-title { font-size: 22px; font-weight: 700; margin-bottom: 12px; color: var(--text-main); }
+.feature-desc { color: var(--text-sub); font-size: 16px; line-height: 1.6; }
+
+/* 반응형 모바일 설정 */
+@media (max-width: 992px) {
+    .hero-container { flex-direction: column; text-align: center; }
+    .hero-content { max-width: 100%; margin-bottom: 50px; }
+    .hero-image { width: 80%; height: 300px; }
+    .hero-title { font-size: 42px; }
+    nav { display: none; }
+}

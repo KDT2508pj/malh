@@ -1,0 +1,82 @@
+/* Resume Management Page Specific Styles */
+
+.sub-nav {
+    background-color: var(--white);
+    border-bottom: 1px solid var(--border-color);
+    padding: 0 40px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+}
+
+.sub-nav ul { display: flex; list-style: none; gap: 30px; }
+.sub-nav a { font-size: 15px; font-weight: 500; color: var(--text-sub); }
+.sub-nav a.active { color: var(--primary-orange); font-weight: 700; }
+
+.resume-container-wrapper {
+    flex: 1;
+    padding: 40px 20px;
+    display: flex;
+    justify-content: center;
+}
+
+.container { width: 100%; max-width: 1000px; }
+
+.dashboard-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 30px; }
+.dashboard-header h2 { font-size: 28px; font-weight: 800; color: var(--primary-navy); }
+.dashboard-header p { color: var(--text-sub); margin-top: 5px; }
+
+.add-btn {
+    background-color: var(--primary-orange); color: var(--white); border: none;
+    padding: 12px 24px; border-radius: 8px; font-weight: 700; cursor: pointer;
+    transition: all 0.2s; display: flex; align-items: center; gap: 8px;
+}
+.add-btn:hover { background-color: var(--primary-orange-light); transform: translateY(-2px); }
+
+/* [Card List] */
+.card-list-wrapper {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 25px;
+}
+
+.resume-card {
+    background-color: var(--white); border-radius: 16px; padding: 25px;
+    box-shadow: var(--shadow-sm); border: 1px solid #eee; transition: all 0.3s;
+}
+.resume-card:hover { transform: translateY(-5px); box-shadow: var(--shadow-md); border-color: var(--primary-orange); }
+
+.card-header { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; position: relative; }
+.file-icon { font-size: 30px; }
+.file-name { font-weight: 700; font-size: 16px; color: var(--text-main); margin-bottom: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 180px; }
+.file-meta { font-size: 12px; color: #999; }
+.delete-btn { position: absolute; right: 0; top: 0; background: none; border: none; cursor: pointer; opacity: 0.3; transition: opacity 0.2s; }
+.delete-btn:hover { opacity: 1; }
+
+.divider { height: 1px; background-color: #f0f0f0; margin-bottom: 20px; }
+
+.info-row { display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 14px; }
+.info-label { color: #888; }
+.info-value { font-weight: 600; color: var(--text-main); }
+
+.tech-tags { display: flex; flex-wrap: wrap; gap: 8px; margin: 15px 0 20px; }
+.tag { background-color: #f0f7ff; color: var(--primary-navy); padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: 600; }
+.tag-more { background-color: #eee; color: #777; }
+
+.stats-area { background-color: #f9f9f9; padding: 15px; border-radius: 10px; margin-bottom: 20px; }
+.stats-row { display: flex; justify-content: space-between; font-size: 13px; color: #666; margin-bottom: 5px; }
+.stats-val { font-weight: 700; color: var(--primary-orange); }
+
+.detail-btn {
+    width: 100%; padding: 12px; background-color: #fff; border: 1px solid #ddd;
+    border-radius: 8px; color: var(--text-main); font-weight: 700; cursor: pointer; transition: all 0.2s;
+}
+.detail-btn:hover { border-color: var(--primary-navy); color: var(--primary-navy); background-color: #f0f7ff; }
+
+/* [Upload View] */
+.upload-header { display: flex; align-items: center; gap: 20px; margin-bottom: 40px; }
+.back-btn { background: none; border: none; color: var(--text-sub); font-weight: 600; cursor: pointer; }
+.upload-container { background-color: var(--white); border-radius: 20px; padding: 60px; box-shadow: var(--shadow-sm); border: 2px dashed #ddd; text-align: center; }
+.upload-icon { font-size: 50px; margin-bottom: 20px; }
+.upload-text { font-size: 18px; font-weight: 700; margin-bottom: 10px; }
+.upload-sub { color: #999; font-size: 14px; }
+.upload-box { cursor: pointer; padding: 40px; }
+.upload-box:hover { background-color: #fcfcfc; }

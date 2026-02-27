@@ -1,0 +1,96 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}이력서 상세 통합 - 말해뭐해{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="/static/css/resume/resume_detail.css">
+{% endblock %}
+
+{% block content %}
+<div class="resume-detail-wrapper">
+    <div class="container">
+        <div class="detail-header">
+            <div class="file-info">
+                <h2><span class="file-icon">📄</span> 이력서 1.pdf</h2>
+                <div class="file-meta">2026-02-19 업로드 | 2.5MB</div>
+            </div>
+            <button class="practice-btn" onclick="startPractice()">
+                연습 시작하기 ▶
+            </button>
+        </div>
+
+        <div class="tab-nav">
+            <div class="tab-item active" onclick="switchTab('overview', this)">개요</div>
+            <div class="tab-item" onclick="switchTab('content', this)">내용</div>
+            <div class="tab-item" onclick="switchTab('analysis', this)">분석</div>
+        </div>
+
+        <div id="tab-overview" class="tab-content active">
+            <div class="overview-card">
+                <h3 class="section-title">기본 정보</h3>
+                <div class="info-group">
+                    <div class="info-label">포지션</div>
+                    <div class="info-value">AI 개발자</div>
+                </div>
+                <div class="info-group">
+                    <div class="info-label">경력</div>
+                    <div class="info-value">신입</div>
+                </div>
+                <div class="info-group" style="align-items: flex-start;">
+                    <div class="info-label" style="margin-top: 6px;">기술 스택</div>
+                    <div class="tech-tags">
+                        <span class="tag">MySQL</span>
+                        <span class="tag">Python</span>
+                        <span class="tag">Streamlit</span>
+                        <span class="tag">Java</span>
+                        <span class="tag">Docker</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-content" class="tab-content">
+            <div class="content-section">
+                <h3 class="section-header">학력</h3>
+                <div class="list-item">
+                    <div class="item-header">
+                        <span class="item-title">한국대학교</span>
+                        <span class="item-period">2019.03 - 2025.02</span>
+                    </div>
+                    <div class="item-subtitle">컴퓨터공학과 | 학사 졸업</div>
+                    <div class="item-desc">- 학점: 4.0 / 4.5</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-analysis" class="tab-content">
+            <div class="analysis-grid">
+                <div class="card">
+                    <div class="card-title">📝 최근 연습 기록</div>
+                    <ul class="history-list">
+                        <li class="history-item">
+                            <span class="history-date">2026-02-18</span>
+                            <span class="history-score">78점</span>
+                        </li>
+                    </ul>
+                </div>
+                <div class="graph-section">
+                    <div class="chart-container">
+                        <div class="bar-group">
+                            <div class="bar-value">78</div>
+                            <div class="bar" style="height: 78%; background-color: var(--primary-orange);"></div>
+                            <div class="x-axis-label">5회</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <a href="/resumes" class="back-link">← 이력서 목록으로</a>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/resume/resume_detail.js"></script>
+{% endblock %}
