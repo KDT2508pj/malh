@@ -72,7 +72,7 @@ $(function () {
             window.location.href = "/";
             return;
         }
-        window.location.href = `/interviews/${context.sessionId}/results`;
+        window.location.href = `/interviews/${context.sessionId}/results/${context.selId}/stt`;
     }
 
     async function finishFlow() {

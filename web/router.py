@@ -8,7 +8,9 @@ from models.audio_recording import AudioRecording
 from models.interview_session import InterviewSession
 from models.question import Question
 from models.select_question import SelectQuestion
+from models.speech_score_summary import SpeechScoreSummary
 from models.transcript import Transcript
+from services.speech_score_service import calculate_speech_scores, upsert_speech_summary
 from services.stt_service import (
     build_recording_paths,
     resolve_recording_extension,
@@ -223,10 +225,50 @@ async def result_analysis(request: Request, session_id: int, sel_id: int):
     )
 
 @web_router.get("/interviews/{session_id}/results/{sel_id}/stt")
-async def result_analysis_stt(request: Request, session_id: int, sel_id: int):
+async def result_analysis_stt(
+    request: Request,
+    session_id: int,
+    sel_id: int,
+    db: Session = Depends(get_db),
+):
+    row = (
+        db.query(
+            SelectQuestion.sel_id.label("sel_id"),
+            Question.qust_question_text.label("question_text"),
+            AudioRecording.duration_sec.label("duration_sec"),
+            Transcript.t_transcript_text.label("transcript_text"),
+            SpeechScoreSummary.sss_fluency_score.label("fluency_score"),
+            SpeechScoreSummary.sss_clarity_score.label("clarity_score"),
+            SpeechScoreSummary.sss_structure_score.label("structure_score"),
+            SpeechScoreSummary.sss_length_score.label("length_score"),
+        )
+        .join(Question, Question.qust_id == SelectQuestion.qust_id)
+        .outerjoin(AudioRecording, AudioRecording.sel_id == SelectQuestion.sel_id)
+        .outerjoin(Transcript, Transcript.sel_id == SelectQuestion.sel_id)
+        .outerjoin(SpeechScoreSummary, SpeechScoreSummary.sel_id == SelectQuestion.sel_id)
+        .filter(SelectQuestion.inter_id == session_id, SelectQuestion.sel_id == sel_id)
+        .first()
+    )
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Question in session not found.")
+
+    transcript_text = (row.transcript_text or "").strip()
+    duration_sec = int(row.duration_sec or 0)
+    score_payload = None
+
+    if transcript_text:
+        score_payload = calculate_speech_scores(transcript_text=transcript_text, duration_sec=duration_sec)
+        upsert_speech_summary(db=db, sel_id=sel_id, score=score_payload)
+
     return templates.TemplateResponse(
         "result/analysis_stt.html",
-        {"request": request, "session_id": session_id, "sel_id": sel_id},
+        {
+            "request": request,
+            "session_id": session_id,
+            "sel_id": sel_id,
+            "question_text": row.question_text,
+            "score": score_payload,
+        },
     )
 
 @web_router.get("/interviews/{session_id}/results/{sel_id}/text")
@@ -456,4 +498,50 @@ async def run_stt(
         "upload_status": recording.upload_status,
         "transcript_id": transcript.transcript_id,
         "transcript_text": transcript.t_transcript_text,
+    }
+
+
+@web_router.post(
+    "/api/interviews/{inter_id}/questions/{sel_id}/speech-score",
+    status_code=status.HTTP_200_OK,
+)
+async def build_speech_score(
+    inter_id: int,
+    sel_id: int,
+    db: Session = Depends(get_db),
+):
+    row = (
+        db.query(
+            SelectQuestion.sel_id.label("sel_id"),
+            AudioRecording.duration_sec.label("duration_sec"),
+            Transcript.t_transcript_text.label("transcript_text"),
+        )
+        .outerjoin(AudioRecording, AudioRecording.sel_id == SelectQuestion.sel_id)
+        .outerjoin(Transcript, Transcript.sel_id == SelectQuestion.sel_id)
+        .filter(SelectQuestion.inter_id == inter_id, SelectQuestion.sel_id == sel_id)
+        .first()
+    )
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Question in session not found.")
+    if not (row.transcript_text or "").strip():
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Transcript is missing. Run STT first.",
+        )
+
+    score_payload = calculate_speech_scores(
+        transcript_text=row.transcript_text,
+        duration_sec=int(row.duration_sec or 0),
+    )
+    summary = upsert_speech_summary(db=db, sel_id=sel_id, score=score_payload)
+    return {
+        "message": "Speech score calculated.",
+        "inter_id": inter_id,
+        "sel_id": sel_id,
+        "score_id": summary.score_id,
+        "fluency_score": float(summary.sss_fluency_score),
+        "clarity_score": float(summary.sss_clarity_score),
+        "structure_score": float(summary.sss_structure_score),
+        "length_score": float(summary.sss_length_score),
+        "metrics": score_payload.metrics,
     }
