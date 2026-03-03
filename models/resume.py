@@ -12,7 +12,7 @@ class Resume(Base):
     __tablename__ = "resume"
 
     resume_id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(Integer, ForeignKey("User.user_id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("user.user_id"), nullable=False)
     resume_file_name = Column(String(100), nullable=False)
     resume_file_type = Column(Enum("DOCX", "DOC", "PDF"), nullable=False)
     resume_file_path = Column(String(255), nullable=False)
