@@ -7,33 +7,41 @@ from pathlib import Path
 from typing import List, Optional
 
 from dotenv import load_dotenv
-from fastapi import HTTPException, UploadFile
+from fastapi import HTTPException
 from openai import OpenAI
 from sqlalchemy.orm import Session
 
-from app.models.resume import Resume
-from app.models.resume_keyword import ResumeKeyword
-from app.models.resume_classification import ResumeClassification
-from app.models.llm_run import LlmRun
-from app.schemas.resume_llm import (
+from models.resume import Resume
+from models.resume_keyword import ResumeKeyword
+from models.resume_classification import ResumeClassification
+from models.llm_run import LlmRun
+from schemas.resume_llm import (
     ResumeClassificationResult,
-    ResumeKeywordResult,
     ResumeKeywordItem,
+    ResumeKeywordResult,
+)
+from services.prompt.resume.classify_prompt import (
+    PROMPT_VERSION_CLASSIFY,
+    CLASSIFY_SYSTEM_PROMPT,
+    build_classify_user_prompt,
+)
+from services.prompt.resume.keyword_prompt import (
+    PROMPT_VERSION_KEYWORD,
+    KEYWORD_SYSTEM_PROMPT,
+    build_keyword_user_prompt,
 )
 
 load_dotenv()
 
 DEFAULT_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
-UPLOAD_DIR = Path(os.environ.get("RESUME_UPLOAD_DIR", "./uploads/resume"))
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+UPLOAD_DIR = Path(
+    os.environ.get("RESUME_UPLOAD_DIR", str(PROJECT_ROOT / "uploads" / "resume"))
+)
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
-PROMPT_VERSION_CLASSIFY = "RESUME_CLASSIFY_V1"
-PROMPT_VERSION_KEYWORD = "RESUME_KEYWORD_V1"
 
-
-# -----------------------------
-# 파일 처리
-# -----------------------------
 def normalize_text(text: str) -> str:
     text = text.replace("\u00a0", " ")
     text = re.sub(r"[ \t]+", " ", text)
@@ -53,12 +61,10 @@ def detect_file_type(filename: str) -> str:
         return "PDF"
     if ext == ".docx":
         return "DOCX"
-    if ext == ".doc":
-        return "DOC"
 
     raise HTTPException(
         status_code=400,
-        detail="지원하지 않는 파일 형식입니다. PDF/DOCX/DOC만 허용합니다."
+        detail="지원하지 않는 파일 형식입니다. PDF/DOCX만 허용합니다.",
     )
 
 
@@ -67,15 +73,15 @@ def sha256_bytes(data: bytes) -> str:
 
 
 def save_file(filename: str, data: bytes) -> str:
-    stored_name = f"{uuid.uuid4().hex}_{safe_filename(filename)}"
-    save_path = UPLOAD_DIR / stored_name
+    saved_name = f"{uuid.uuid4().hex}_{safe_filename(filename)}"
+    save_path = UPLOAD_DIR / saved_name
     save_path.write_bytes(data)
     return str(save_path)
 
 
 def extract_pdf_text(data: bytes) -> str:
     try:
-        import fitz  # PyMuPDF
+        import fitz
     except Exception as e:
         raise RuntimeError("pymupdf가 필요합니다. pip install pymupdf") from e
 
@@ -89,8 +95,8 @@ def extract_docx_text(data: bytes) -> str:
     except Exception as e:
         raise RuntimeError("python-docx가 필요합니다. pip install python-docx") from e
 
-    f = io.BytesIO(data)
-    doc = Document(f)
+    file_obj = io.BytesIO(data)
+    doc = Document(file_obj)
 
     parts: List[str] = []
 
@@ -118,19 +124,15 @@ def extract_text_from_upload(filename: str, data: bytes) -> str:
     if ext == ".docx":
         return extract_docx_text(data)
 
-    # 현재 .doc는 실질적으로 텍스트 추출이 까다로워서 막는 것을 권장
     if ext == ".doc":
         raise HTTPException(
             status_code=400,
-            detail=".doc 파일은 현재 미지원입니다. DOCX 또는 PDF로 변환 후 업로드해 주세요."
+            detail=".doc 파일은 현재 미지원입니다. DOCX 또는 PDF로 변환 후 업로드해 주세요.",
         )
 
     raise HTTPException(status_code=400, detail="지원하지 않는 파일 형식입니다.")
 
 
-# -----------------------------
-# OpenAI
-# -----------------------------
 def get_client() -> OpenAI:
     api_key = os.environ.get("OPENAI_API_KEY", "")
     if not api_key:
@@ -138,36 +140,17 @@ def get_client() -> OpenAI:
     return OpenAI(api_key=api_key)
 
 
-def classify_resume_llm(resume_text: str, model: str = DEFAULT_MODEL) -> ResumeClassificationResult:
+def classify_resume_llm(
+    resume_text: str,
+    model: str = DEFAULT_MODEL,
+) -> ResumeClassificationResult:
     client = get_client()
-
-    system = (
-        "당신은 이력서를 직무군으로 분류하는 분석기입니다. "
-        "반드시 제공된 스키마에 맞는 JSON만 출력하십시오. "
-        "근거 없는 추측은 금지합니다."
-    )
-
-    user = f"""
-아래 이력서 텍스트를 읽고 직무군과 직무명을 분류하십시오.
-
-[규칙]
-- job_family는 반드시 아래 값 중 하나만 사용:
-  IT, FINANCE, MARKETING, SALES, DESIGN, HR, EDUCATION, HEALTHCARE,
-  MANUFACTURING, LOGISTICS, CUSTOMER_SERVICE, LEGAL, PUBLIC, RESEARCH, ETC
-- job_role은 가능한 경우 구체적으로 작성:
-  예) 백엔드 개발자, 프론트엔드 개발자, 데이터 분석가
-- evidence에는 반드시 원문 근거와 판단 이유를 넣으십시오.
-- 불명확하면 ETC를 사용하십시오.
-
-[이력서 원문]
-{resume_text}
-"""
 
     resp = client.responses.parse(
         model=model,
         input=[
-            {"role": "system", "content": system},
-            {"role": "user", "content": user},
+            {"role": "system", "content": CLASSIFY_SYSTEM_PROMPT},
+            {"role": "user", "content": build_classify_user_prompt(resume_text)},
         ],
         text_format=ResumeClassificationResult,
         truncation="auto",
@@ -187,37 +170,18 @@ def analyze_resume_keywords_llm(
 ) -> ResumeKeywordResult:
     client = get_client()
 
-    system = (
-        "당신은 이력서를 직무 기준으로 분석해 핵심 키워드를 추출하는 분석기입니다. "
-        "반드시 제공된 스키마에 맞는 JSON만 출력하십시오. "
-        "추측하지 말고 원문 근거가 있는 키워드만 추출하십시오."
-    )
-
-    user = f"""
-아래 이력서를 이미 분류된 직무 기준으로 분석하여 키워드를 추출하십시오.
-
-[분류 결과]
-- job_family: {job_family}
-- job_role: {job_role or ""}
-
-[키워드 타입]
-SKILL, TOOL, DOMAIN_TERM, CERTIFICATE, ACHIEVEMENT, EDU, SOFT_SKILL, TASK, INDUSTRY, METRIC, ETC
-
-[규칙]
-- 해당 직무에서 의미 있는 키워드만 추출
-- 너무 일반적인 표현은 제외
-- 중복 키워드는 제거
-- evidence에는 반드시 원문 근거와 판단 이유 포함
-
-[이력서 원문]
-{resume_text}
-"""
-
     resp = client.responses.parse(
         model=model,
         input=[
-            {"role": "system", "content": system},
-            {"role": "user", "content": user},
+            {"role": "system", "content": KEYWORD_SYSTEM_PROMPT},
+            {
+                "role": "user",
+                "content": build_keyword_user_prompt(
+                    resume_text=resume_text,
+                    job_family=job_family,
+                    job_role=job_role,
+                ),
+            },
         ],
         text_format=ResumeKeywordResult,
         truncation="auto",
@@ -229,9 +193,6 @@ SKILL, TOOL, DOMAIN_TERM, CERTIFICATE, ACHIEVEMENT, EDU, SOFT_SKILL, TASK, INDUS
     return resp.output_parsed
 
 
-# -----------------------------
-# llm_run 저장
-# -----------------------------
 def save_llm_run_success(
     db: Session,
     stage: str,
@@ -272,11 +233,8 @@ def save_llm_run_failed(
     return row
 
 
-# -----------------------------
-# 기타
-# -----------------------------
 def dedupe_keywords(items: List[ResumeKeywordItem]) -> List[ResumeKeywordItem]:
-    results: List[ResumeKeywordItem] = []
+    result: List[ResumeKeywordItem] = []
     seen = set()
 
     for item in items:
@@ -289,14 +247,11 @@ def dedupe_keywords(items: List[ResumeKeywordItem]) -> List[ResumeKeywordItem]:
             continue
 
         seen.add(key)
-        results.append(item)
+        result.append(item)
 
-    return results
+    return result
 
 
-# -----------------------------
-# 메인 프로세스
-# -----------------------------
 def create_resume_record(
     db: Session,
     user_id: int,
@@ -311,7 +266,7 @@ def create_resume_record(
     if not extracted_text:
         raise HTTPException(
             status_code=400,
-            detail="텍스트를 추출하지 못했습니다. 스캔 PDF일 수 있습니다."
+            detail="텍스트를 추출하지 못했습니다. 스캔 PDF일 수 있습니다.",
         )
 
     max_chars = 80000
@@ -323,7 +278,7 @@ def create_resume_record(
         resume_file_name=original_filename,
         resume_file_type=file_type,
         resume_file_path=file_path,
-        resume_file_size=len(data),   # bytes 저장
+        resume_file_size=len(data),
         resume_extracted_text=extracted_text,
         resume_sha256=sha256_bytes(data),
     )
@@ -351,18 +306,18 @@ def run_resume_classification(
             prompt_version=PROMPT_VERSION_CLASSIFY,
         )
 
-        classification_row = ResumeClassification(
+        row = ResumeClassification(
             resume_id=resume.resume_id,
             llm_id=llm_run.llm_id,
             class_job_family=classification_result.job_family,
             class_job_role=classification_result.job_role,
             class_evidence=[item.model_dump() for item in classification_result.evidence],
         )
-        db.add(classification_row)
+        db.add(row)
         db.commit()
-        db.refresh(classification_row)
+        db.refresh(row)
 
-        return classification_row, classification_result
+        return row, classification_result
 
     except Exception as e:
         db.rollback()
@@ -379,7 +334,7 @@ def run_resume_classification(
 
         raise HTTPException(
             status_code=500,
-            detail=f"이력서 분류 실패: {type(e).__name__}: {e}"
+            detail=f"이력서 분류 실패: {type(e).__name__}: {e}",
         ) from e
 
 
@@ -397,7 +352,7 @@ def run_resume_keyword_analysis(
             model=model,
         )
 
-        deduped_keywords = dedupe_keywords(keyword_result.keywords)
+        deduped = dedupe_keywords(keyword_result.keywords)
 
         llm_run = save_llm_run_success(
             db=db,
@@ -406,7 +361,7 @@ def run_resume_keyword_analysis(
             prompt_version=PROMPT_VERSION_KEYWORD,
         )
 
-        for item in deduped_keywords:
+        for item in deduped:
             row = ResumeKeyword(
                 resume_id=resume.resume_id,
                 llm_id=llm_run.llm_id,
@@ -417,8 +372,7 @@ def run_resume_keyword_analysis(
             db.add(row)
 
         db.commit()
-
-        return deduped_keywords, keyword_result.notes
+        return deduped, keyword_result.notes
 
     except Exception as e:
         db.rollback()
@@ -435,24 +389,24 @@ def run_resume_keyword_analysis(
 
         raise HTTPException(
             status_code=500,
-            detail=f"이력서 키워드 분석 실패: {type(e).__name__}: {e}"
+            detail=f"이력서 키워드 분석 실패: {type(e).__name__}: {e}",
         ) from e
 
 
 def process_resume_upload_and_analyze(
     db: Session,
     user_id: int,
-    file: UploadFile,
+    original_filename: str,
+    data: bytes,
     model: str = DEFAULT_MODEL,
 ):
-    data = file.file.read()
     if not data:
         raise HTTPException(status_code=400, detail="빈 파일입니다.")
 
     resume = create_resume_record(
         db=db,
         user_id=user_id,
-        original_filename=file.filename or "resume.pdf",
+        original_filename=original_filename,
         data=data,
     )
 

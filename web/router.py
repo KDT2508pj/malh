@@ -1,7 +1,13 @@
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
+from fastapi import APIRouter, Request, Depends, File, Form, UploadFile
+from sqlalchemy.orm import Session
+
+from services.resume_service import (
+    DEFAULT_MODEL,
+    process_resume_upload_and_analyze,
+)
+
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
-from sqlalchemy.orm import Session
 
 from core.database import get_db
 from models.audio_recording import AudioRecording
@@ -52,6 +58,23 @@ async def resume_detail(request: Request, resume_id: int):
 @web_router.get("/resumes/{resume_id}/feedback")
 async def resume_feedback(request: Request, resume_id: int):
     return templates.TemplateResponse("resume/feedback.html", {"request": request, "resume_id": resume_id, "session_id": 1})
+
+@web_router.post("/resumes/upload-analyze")
+async def upload_and_analyze_resume(
+    user_id: int = Form(...),
+    model: str = Form(DEFAULT_MODEL),
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+):
+    data = await file.read()
+
+    return process_resume_upload_and_analyze(
+        db=db,
+        user_id=user_id,
+        original_filename=file.filename or "resume.pdf",
+        data=data,
+        model=model,
+    )
 
 # Interview
 @web_router.get("/interviews/wait")
