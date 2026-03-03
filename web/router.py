@@ -12,6 +12,7 @@ from models.transcript import Transcript
 from services.stt_service import (
     build_recording_paths,
     resolve_recording_extension,
+    run_stt_and_update,
     save_recording_and_upsert,
 )
 
@@ -262,7 +263,7 @@ async def result_transcript(
                 "sel_order_no": row.sel_order_no,
                 "question_text": row.question_text,
                 "duration_sec": int(row.duration_sec or 0),
-                "transcript_text": row.transcript_text or "아직 변환된 텍스트가 없습니다.",
+                "transcript_text": row.transcript_text or "Transcript is not generated yet.",
             },
         },
     )
@@ -410,4 +411,49 @@ async def upload_recording(
         "duration_sec": saved.duration_sec,
         "upload_status": saved.upload_status,
         "storage_rule_path": relative_path,
+    }
+
+
+@web_router.post(
+    "/api/interviews/{inter_id}/questions/{sel_id}/stt",
+    status_code=status.HTTP_200_OK,
+)
+async def run_stt(
+    inter_id: int,
+    sel_id: int,
+    db: Session = Depends(get_db),
+):
+    select_question = (
+        db.query(SelectQuestion)
+        .filter(SelectQuestion.sel_id == sel_id, SelectQuestion.inter_id == inter_id)
+        .first()
+    )
+    if not select_question:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Question in session not found.",
+        )
+
+    try:
+        recording, transcript = run_stt_and_update(db=db, inter_id=inter_id, sel_id=sel_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"STT processing failed: {exc}",
+        ) from exc
+
+    return {
+        "message": "STT completed.",
+        "inter_id": inter_id,
+        "sel_id": sel_id,
+        "recording_id": recording.recording_id,
+        "upload_status": recording.upload_status,
+        "transcript_id": transcript.transcript_id,
+        "transcript_text": transcript.t_transcript_text,
     }

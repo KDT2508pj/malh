@@ -22,6 +22,7 @@ class Settings(BaseSettings):
 
     OPENAI_API_KEY: str | None = None
     OPENAI_MODEL: str = Field(default="gpt-4.1-mini")
+    OPENAI_STT_MODEL: str = Field(default="whisper-1")
 
     model_config = SettingsConfigDict(
         env_file=str(PROJECT_ROOT / ".env"),
