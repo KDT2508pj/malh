@@ -4,6 +4,12 @@ let mediaRecorder = null;
 let mediaStream = null;
 let recordedChunks = [];
 let isRecording = false;
+let audioContext = null;
+let analyserNode = null;
+let sourceNode = null;
+let animationFrameId = null;
+let frequencyData = null;
+let smoothedLevels = [];
 
 const interviewContext = window.INTERVIEW_CONTEXT || {};
 const sessionId = Number(interviewContext.sessionId || 0);
@@ -74,6 +80,86 @@ function cleanupStream() {
     }
 }
 
+function stopVisualizer() {
+    if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+    }
+    if (sourceNode) {
+        sourceNode.disconnect();
+        sourceNode = null;
+    }
+    if (analyserNode) {
+        analyserNode.disconnect();
+        analyserNode = null;
+    }
+    if (audioContext) {
+        audioContext.close().catch(() => {});
+        audioContext = null;
+    }
+    frequencyData = null;
+    smoothedLevels = [];
+
+    $(".recording-visual .wave-bar").css({
+        height: "16px",
+        opacity: "0.45",
+    });
+}
+
+function startVisualizer(stream) {
+    const bars = $(".recording-visual .wave-bar").toArray();
+    if (!bars.length) {
+        return;
+    }
+
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) {
+        return;
+    }
+
+    audioContext = new AudioContextClass();
+    analyserNode = audioContext.createAnalyser();
+    analyserNode.fftSize = 256;
+    analyserNode.smoothingTimeConstant = 0.75;
+    sourceNode = audioContext.createMediaStreamSource(stream);
+    sourceNode.connect(analyserNode);
+
+    frequencyData = new Uint8Array(analyserNode.frequencyBinCount);
+    smoothedLevels = Array.from({ length: bars.length }, () => 0);
+
+    const minHeight = 12;
+    const maxHeight = 96;
+    const binSize = Math.max(1, Math.floor(frequencyData.length / bars.length));
+
+    const render = () => {
+        if (!analyserNode) {
+            return;
+        }
+        analyserNode.getByteFrequencyData(frequencyData);
+
+        for (let i = 0; i < bars.length; i += 1) {
+            let sum = 0;
+            const start = i * binSize;
+            const end = Math.min(frequencyData.length, start + binSize);
+            for (let j = start; j < end; j += 1) {
+                sum += frequencyData[j];
+            }
+            const avg = sum / Math.max(1, end - start);
+            const normalized = avg / 255;
+
+            smoothedLevels[i] = smoothedLevels[i] * 0.6 + normalized * 0.4;
+
+            const height = minHeight + smoothedLevels[i] * (maxHeight - minHeight);
+            bars[i].style.height = `${Math.round(height)}px`;
+            bars[i].style.opacity = `${Math.max(0.45, Math.min(1, 0.5 + smoothedLevels[i] * 0.8))}`;
+        }
+
+        animationFrameId = requestAnimationFrame(render);
+    };
+
+    render();
+}
+
 async function startRecordingFlow() {
     if (isRecording) {
         return;
@@ -102,12 +188,14 @@ async function startRecordingFlow() {
             }
         };
 
+        startVisualizer(mediaStream);
         mediaRecorder.start();
         isRecording = true;
         $("#mode-standby").removeClass("active");
         $("#mode-recording").addClass("active");
         startTimer();
     } catch (_error) {
+        stopVisualizer();
         cleanupStream();
         alert("Microphone permission is required.");
     }
@@ -120,6 +208,7 @@ function finishRecording() {
 
     isRecording = false;
     stopTimer();
+    stopVisualizer();
 
     mediaRecorder.onstop = async () => {
         try {

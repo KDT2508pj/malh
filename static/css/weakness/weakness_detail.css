@@ -47,25 +47,16 @@
 }
 @keyframes blink { 50% { opacity: 0.6; } }
 
-/* Wave Animation */
+/* Live Wave Visualization */
 .recording-visual { height: 120px; display: flex; justify-content: center; align-items: center; gap: 6px; margin-bottom: 30px; }
-.wave-bar { width: 8px; background-color: var(--primary-navy); border-radius: 4px; animation: wave 1s ease-in-out infinite; }
-@keyframes wave {
-    0%, 100% { height: 30px; opacity: 0.5; }
-    50% { height: 100px; opacity: 1; background-color: var(--primary-orange); }
-}
+.wave-bar { width: 8px; background-color: var(--primary-navy); border-radius: 4px; height: 16px; opacity: 0.45; transition: height 90ms linear, opacity 120ms linear; will-change: height, opacity; }
 
-/* Wave Bar Delays */
-.wave-bar:nth-child(1) { height: 40px; animation-delay: 0.0s; }
-.wave-bar:nth-child(2) { height: 60px; animation-delay: 0.1s; }
-.wave-bar:nth-child(3) { height: 90px; animation-delay: 0.2s; }
-.wave-bar:nth-child(4) { height: 50px; animation-delay: 0.3s; }
-.wave-bar:nth-child(5) { height: 80px; animation-delay: 0.4s; }
-.wave-bar:nth-child(6) { height: 40px; animation-delay: 0.5s; }
-.wave-bar:nth-child(7) { height: 70px; animation-delay: 0.4s; }
-.wave-bar:nth-child(8) { height: 100px; animation-delay: 0.3s; }
-.wave-bar:nth-child(9) { height: 60px; animation-delay: 0.2s; }
-.wave-bar:nth-child(10) { height: 40px; animation-delay: 0.1s; }
+/* Keep center bars warmer for readability */
+.wave-bar:nth-child(1), .wave-bar:nth-child(10) { background-color: #7b8396; }
+.wave-bar:nth-child(2), .wave-bar:nth-child(9) { background-color: #9a7b67; }
+.wave-bar:nth-child(3), .wave-bar:nth-child(8) { background-color: #c26a42; }
+.wave-bar:nth-child(4), .wave-bar:nth-child(7) { background-color: #e1651f; }
+.wave-bar:nth-child(5), .wave-bar:nth-child(6) { background-color: #f06f00; }
 
 .timer { font-size: 36px; font-weight: 700; color: var(--text-main); margin-bottom: 30px; }
 .stop-btn {
