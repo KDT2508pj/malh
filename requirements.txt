@@ -1,4 +1,4 @@
-fastapi
+﻿fastapi
 uvicorn
 jinja2
 python-multipart
@@ -10,3 +10,4 @@ pymysql
 openai
 bcrypt==4.0.1
 passlib
+faster-whisper

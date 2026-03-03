@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+from functools import lru_cache
 from pathlib import Path
-from typing import Any
 
 from core.config import settings
 from models.audio_recording import AudioRecording
@@ -80,34 +80,36 @@ def save_recording_and_upsert(
     return record
 
 
-def _get_openai_client() -> Any:
-    api_key = settings.OPENAI_API_KEY or ""
-    if not api_key.strip():
-        raise RuntimeError("OPENAI_API_KEY is not configured.")
-
+@lru_cache
+def _get_whisper_model():
     try:
-        from openai import OpenAI  # type: ignore
+        from faster_whisper import WhisperModel  # type: ignore
     except ImportError as exc:
-        raise RuntimeError("openai package is not installed. Add it to requirements.") from exc
+        raise RuntimeError(
+            "faster-whisper package is not installed. Add it to requirements."
+        ) from exc
 
-    return OpenAI(api_key=api_key)
+    return WhisperModel(
+        settings.FASTER_WHISPER_MODEL_SIZE,
+        device=settings.FASTER_WHISPER_DEVICE,
+        compute_type=settings.FASTER_WHISPER_COMPUTE_TYPE,
+    )
 
 
 def transcribe_audio_file(audio_path: Path) -> str:
     if not audio_path.exists():
         raise FileNotFoundError(f"Audio file not found: {audio_path}")
 
-    client = _get_openai_client()
-    model = getattr(settings, "OPENAI_STT_MODEL", None) or "whisper-1"
-
-    with audio_path.open("rb") as audio_file:
-        response = client.audio.transcriptions.create(
-            model=model,
-            file=audio_file,
-            language="ko",
-        )
-
-    transcript_text = (getattr(response, "text", None) or "").strip()
+    model = _get_whisper_model()
+    segments, _ = model.transcribe(
+        str(audio_path),
+        language="ko",
+        beam_size=settings.FASTER_WHISPER_BEAM_SIZE,
+        vad_filter=True,
+    )
+    transcript_text = " ".join(
+        segment.text.strip() for segment in segments if segment.text and segment.text.strip()
+    ).strip()
     if not transcript_text:
         raise RuntimeError("STT completed but transcript text is empty.")
     return transcript_text

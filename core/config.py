@@ -22,7 +22,10 @@ class Settings(BaseSettings):
 
     OPENAI_API_KEY: str | None = None
     OPENAI_MODEL: str = Field(default="gpt-4.1-mini")
-    OPENAI_STT_MODEL: str = Field(default="whisper-1")
+    FASTER_WHISPER_MODEL_SIZE: str = Field(default="small")
+    FASTER_WHISPER_DEVICE: str = Field(default="cpu")
+    FASTER_WHISPER_COMPUTE_TYPE: str = Field(default="int8")
+    FASTER_WHISPER_BEAM_SIZE: int = Field(default=5)
 
     model_config = SettingsConfigDict(
         env_file=str(PROJECT_ROOT / ".env"),

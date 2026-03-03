@@ -18,7 +18,7 @@
             </div>
 
             <div class="record-area">
-                <div class="mic-circle" onclick="startRecordingFlow()">🎤</div>
+                <div class="mic-circle" onclick="startRecordingFlow()">MIC</div>
                 <button class="record-btn" onclick="startRecordingFlow()">녹음하기</button>
                 <p class="record-guide">버튼을 누르면 마이크 권한 확인 후 녹음이 시작됩니다.</p>
             </div>
@@ -27,7 +27,7 @@
         </div>
 
         <div id="mode-recording" class="mode-container">
-            <div class="page-label-recording">🔴 녹음 중 (Recording)</div>
+            <div class="page-label-recording">녹음 중 (Recording)</div>
 
             <div class="question-card" style="padding: 50px 40px; margin-bottom: 40px;">
                 <div class="question-number">Question {{ question_item.sel_order_no }}</div>
@@ -43,7 +43,7 @@
 
             <button class="stop-btn" onclick="finishRecording()">
                 <div class="stop-icon"></div>
-                녹음 완료
+                녹음 종료
             </button>
         </div>
     </div>
