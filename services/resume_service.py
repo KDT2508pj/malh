@@ -35,6 +35,8 @@ load_dotenv()
 
 DEFAULT_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
 
+
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 UPLOAD_DIR = Path(
     os.environ.get("RESUME_UPLOAD_DIR", str(PROJECT_ROOT / "uploads" / "resume"))
@@ -70,14 +72,6 @@ def detect_file_type(filename: str) -> str:
 
 def sha256_bytes(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
-
-
-def save_file(filename: str, data: bytes) -> str:
-    saved_name = f"{uuid.uuid4().hex}_{safe_filename(filename)}"
-    save_path = UPLOAD_DIR / saved_name
-    save_path.write_bytes(data)
-    return str(save_path)
-
 
 def extract_pdf_text(data: bytes) -> str:
     try:
@@ -123,12 +117,6 @@ def extract_text_from_upload(filename: str, data: bytes) -> str:
 
     if ext == ".docx":
         return extract_docx_text(data)
-
-    if ext == ".doc":
-        raise HTTPException(
-            status_code=400,
-            detail=".doc 파일은 현재 미지원입니다. DOCX 또는 PDF로 변환 후 업로드해 주세요.",
-        )
 
     raise HTTPException(status_code=400, detail="지원하지 않는 파일 형식입니다.")
 
@@ -259,7 +247,6 @@ def create_resume_record(
     data: bytes,
 ) -> Resume:
     file_type = detect_file_type(original_filename)
-    file_path = save_file(original_filename, data)
     extracted_text = extract_text_from_upload(original_filename, data)
     extracted_text = normalize_text(extracted_text)
 
@@ -277,7 +264,7 @@ def create_resume_record(
         user_id=user_id,
         resume_file_name=original_filename,
         resume_file_type=file_type,
-        resume_file_path=file_path,
+        resume_file_path=None,
         resume_file_size=len(data),
         resume_extracted_text=extracted_text,
         resume_sha256=sha256_bytes(data),
