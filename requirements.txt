@@ -7,3 +7,4 @@ pydantic-settings
 aiosqlite
 python-dotenv
 pymysql
+bcrypt==4.0.1
