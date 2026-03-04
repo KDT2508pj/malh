@@ -456,6 +456,7 @@ async def result_analysis_stt(
         score_payload = calculate_speech_scores(
             transcript_text=transcript_text,
             duration_sec=duration_sec,
+            question_text=row.question_text,
         )
         upsert_speech_summary(db=db, sel_id=sel_id, score=score_payload)
 
@@ -730,9 +731,11 @@ async def build_speech_score(
     row = (
         db.query(
             SelectQuestion.sel_id.label("sel_id"),
+            Question.qust_question_text.label("question_text"),
             AudioRecording.duration_sec.label("duration_sec"),
             Transcript.t_transcript_text.label("transcript_text"),
         )
+        .join(Question, Question.qust_id == SelectQuestion.qust_id)
         .outerjoin(AudioRecording, AudioRecording.sel_id == SelectQuestion.sel_id)
         .outerjoin(Transcript, Transcript.sel_id == SelectQuestion.sel_id)
         .filter(SelectQuestion.inter_id == inter_id, SelectQuestion.sel_id == sel_id)
@@ -752,6 +755,7 @@ async def build_speech_score(
     score_payload = calculate_speech_scores(
         transcript_text=row.transcript_text,
         duration_sec=int(row.duration_sec or 0),
+        question_text=row.question_text,
     )
     summary = upsert_speech_summary(db=db, sel_id=sel_id, score=score_payload)
 

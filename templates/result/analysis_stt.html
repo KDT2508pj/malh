@@ -44,6 +44,45 @@
             </div>
         </div>
 
+        <div class="metrics-container" style="margin-bottom: 24px;">
+            <div class="category-column">
+                <div class="category-header">전달 품질</div>
+                <div class="metric-item">
+                    <span class="metric-label">전달 품질 종합</span>
+                    <span class="metric-value">{{ score.delivery_score }}</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">유창성/명료성 평균</span>
+                    <span class="metric-value">{{ ((score.fluency_score + score.clarity_score) / 2) | round(1) }}</span>
+                </div>
+            </div>
+            <div class="category-column">
+                <div class="category-header">내용 품질</div>
+                <div class="metric-item">
+                    <span class="metric-label">내용 품질 종합</span>
+                    <span class="metric-value">{{ score.content_score }}</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">질문-답변 주제 적합도</span>
+                    <span class="metric-value">{{ score.metrics.topic_overlap }}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="report-box analysis">
+            <h3 class="report-header">측정 신뢰도</h3>
+            <div class="report-content">
+                점수 신뢰도 {{ score.confidence_score }} / 100
+                {% if score.confidence_score >= 75 %}
+                (높음)
+                {% elif score.confidence_score >= 50 %}
+                (중간)
+                {% else %}
+                (낮음)
+                {% endif %}
+            </div>
+        </div>
+
         <div class="analysis-section">
             <div class="section-card">
                 <div class="card-header header-structure"><span>유창성</span></div>
@@ -87,19 +126,19 @@
                         <div class="metric-value">{{ score.metrics.avg_stt_confidence }}</div>
                     </div>
                     <div class="metric-box">
-                        <div class="metric-label">발음 분명도</div>
+                        <div class="metric-label">발음 분명도(proxy)</div>
                         <div class="metric-value">{{ score.metrics.pronunciation_clarity }}</div>
                     </div>
                     <div class="metric-box">
-                        <div class="metric-label">조음 비율</div>
+                        <div class="metric-label">조음 비율(proxy)</div>
                         <div class="metric-value">{{ score.metrics.articulation_ratio }}</div>
                     </div>
                     <div class="metric-box">
-                        <div class="metric-label">음량 안정성</div>
+                        <div class="metric-label">음량 안정성(proxy)</div>
                         <div class="metric-value">{{ score.metrics.volume_stability }}</div>
                     </div>
                     <div class="metric-box">
-                        <div class="metric-label">클리핑 비율</div>
+                        <div class="metric-label">클리핑 비율(proxy)</div>
                         <div class="metric-value">{{ score.metrics.clipping_ratio }}</div>
                     </div>
                 </div>
