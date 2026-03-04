@@ -73,7 +73,6 @@ $(function () {
     // ✅ 변경: 실제 업로드 처리
     function handleFileUpload(file) {
         const formData = new FormData();
-        formData.append('user_id', userId);
         formData.append('model', model);
         formData.append('file', file);
 

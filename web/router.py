@@ -34,8 +34,12 @@ from services.resume_service import (
 
 from models.question_set import QuestionSet
 from models.question_filter_result import QuestionFilterResult
+from services.question_service import ensure_questions_generated_for_resume
 from services.question_service import generate_questions_for_resume
+from services.question_service import get_latest_completed_question_set
 from services.speech_score_service import calculate_speech_scores, upsert_speech_summary
+
+from sqlalchemy.sql import func
 
 from services.stt_service import (
     build_recording_paths,
@@ -243,7 +247,6 @@ async def resume_feedback(
         },
     )
 
-
 @web_router.post("/resumes/{resume_id}/analyze")
 async def analyze_resume(
     request: Request,
@@ -259,7 +262,30 @@ async def analyze_resume(
         resume_id=resume_id,
         model=model,
     )
-    return {"ok": True, "resume_id": resume_id}
+
+    question_set = ensure_questions_generated_for_resume(
+        db=db,
+        resume_id=resume_id,
+        target_count=30,
+        purpose="DEFAULT",
+        model=model,
+    )
+
+    selected_count = (
+        db.query(Question)
+        .filter(
+            Question.set_id == question_set.set_id,
+            Question.qust_is_selected == 1,
+        )
+        .count()
+    )
+
+    return {
+        "ok": True,
+        "resume_id": resume_id,
+        "question_set_id": question_set.set_id,
+        "selected_count": selected_count,
+    }
 
 @web_router.post("/resumes/{resume_id}/delete")
 async def remove_resume(
@@ -401,13 +427,90 @@ async def get_question_set_result(
         ],
     }
 
+#
+@web_router.post("/resumes/{resume_id}/start-practice")
+async def start_practice(
+    request: Request,
+    resume_id: int,
+    db: Session = Depends(get_db),
+):
+    user = _get_login_user(request, db)
+    _get_owned_resume(db, user.user_id, resume_id)
 
+    question_set = get_latest_completed_question_set(db, resume_id)
+    if not question_set:
+        raise HTTPException(
+            status_code=409,
+            detail="생성된 질문 세트가 없습니다. 먼저 이력서 분석을 완료해주세요.",
+        )
+
+    selected_questions = (
+        db.query(Question)
+        .filter(
+            Question.set_id == question_set.set_id,
+            Question.qust_is_selected == 1,
+        )
+        .order_by(func.rand())
+        .limit(5)
+        .all()
+    )
+
+    if len(selected_questions) < 5:
+        raise HTTPException(
+            status_code=409,
+            detail="출제 가능한 질문이 5개 미만입니다.",
+        )
+
+    try:
+        interview_session = InterviewSession(
+            user_id=user.user_id,
+            resume_id=resume_id,
+            set_id=question_set.set_id,
+            inter_status="IN_PROGRESS",
+        )
+        db.add(interview_session)
+        db.flush()
+
+        for idx, question in enumerate(selected_questions, start=1):
+            db.add(
+                SelectQuestion(
+                    inter_id=interview_session.inter_id,
+                    qust_id=question.qust_id,
+                    sel_order_no=idx,
+                )
+            )
+
+        db.commit()
+        db.refresh(interview_session)
+
+        return {
+            "ok": True,
+            "session_id": interview_session.inter_id,
+            "resume_id": resume_id,
+            "set_id": question_set.set_id,
+        }
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"연습 세션 생성 실패: {e}",
+        ) from e
 
 
 # Interview
-@web_router.get("/interviews/wait")
-async def interview_wait(request: Request):
-    return templates.TemplateResponse("interview/wait.html", {"request": request})
+@web_router.get("/interviews/{session_id}/wait")
+async def interview_wait(
+    request: Request,
+    session_id: int,
+):
+    return templates.TemplateResponse(
+        "interview/wait.html",
+        {
+            "request": request,
+            "session_id": session_id,
+        },
+    )
 
 
 @web_router.get("/interviews/{session_id}")

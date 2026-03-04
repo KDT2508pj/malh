@@ -502,7 +502,7 @@ def get_latest_completed_question_set(
 def ensure_questions_generated_for_resume(
     db: Session,
     resume_id: int,
-    target_count: int = 30,
+    target_count: int = 50,
     purpose: str = "DEFAULT",
     model: str = DEFAULT_MODEL,
 ) -> QuestionSet:

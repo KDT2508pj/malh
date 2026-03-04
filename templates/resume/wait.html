@@ -2,38 +2,59 @@
 
 {% block title %}이력서 분석 중 - 말해뭐해{% endblock %}
 
+{% block head %}
+<link rel="stylesheet" href="/static/css/resume/resume_wait.css">
+{% endblock %}
+
 {% block content %}
-<div class="resume-container-wrapper">
+<div
+    id="resumeWaitPage"
+    class="resume-container-wrapper"
+    data-resume-id="{{ resume_id }}"
+    data-model="{{ model }}"
+>
     <div class="container">
         <div class="upload-container" style="text-align:center; padding:80px 20px;">
-            <h2>이력서 분석 중입니다...</h2>
+            <h2>이력서 분석 및 질문 생성 중입니다...</h2>
             <p>잠시만 기다려 주세요.</p>
+
+            <div
+                style="
+                    width: 100%;
+                    max-width: 420px;
+                    margin: 30px auto 12px;
+                    background: #e9eef3;
+                    border-radius: 999px;
+                    overflow: hidden;
+                    height: 16px;
+                "
+            >
+                <div
+                    id="progressBar"
+                    style="
+                        width: 0%;
+                        height: 100%;
+                        background: #123e59;
+                        transition: width 0.2s ease;
+                    "
+                ></div>
+            </div>
+
+            <div
+                id="percentageText"
+                style="
+                    font-size: 16px;
+                    font-weight: 600;
+                    color: #123e59;
+                "
+            >
+                0%
+            </div>
         </div>
     </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
-<script>
-    async function runAnalysis() {
-        const formData = new FormData();
-        formData.append("model", "{{ model }}");
-
-        const response = await fetch("/resumes/{{ resume_id }}/analyze", {
-            method: "POST",
-            body: formData
-        });
-
-        const result = await response.json();
-
-        if (!response.ok) {
-            alert(result.detail || "분석 실패");
-            return;
-        }
-
-        location.href = "/resumes";
-    }
-
-    runAnalysis();
-</script>
+<script src="/static/js/resume/resume_wait.js"></script>
 {% endblock %}

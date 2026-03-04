@@ -2,35 +2,56 @@
  * resume_detail.js - 이력서 상세 페이지 동작 로직 (jQuery)
  */
 
-// 연습 시작하기 버튼 로직
-function startPractice() {
-    location.href = 'question_wait.html';
-}
-
-/**
- * 탭 전환 로직
- * @param {string} tabName - 표시할 탭의 ID 부분
- * @param {HTMLElement} element - 클릭된 탭 요소
- */
 function switchTab(tabName, element) {
-    // 1. 모든 탭 컨텐츠 숨기기
     $('.tab-content').removeClass('active');
 
-    // 2. 선택한 탭 컨텐츠 보이기
     const $selectedContent = $('#tab-' + tabName);
     if ($selectedContent.length) {
         $selectedContent.addClass('active');
     }
 
-    // 3. 모든 탭 버튼 활성화 상태 제거
     $('.tab-item').removeClass('active');
 
-    // 4. 클릭한 탭 버튼 활성화
     if (element) {
         $(element).addClass('active');
     }
 }
 
-$(document).ready(function() {
-    console.log("이력서 상세 페이지가 로드되었습니다.");
+function startPractice(resumeId) {
+    const $btn = $('#startPracticeBtn');
+    const originalText = $btn.text();
+
+    $btn.prop('disabled', true).text('문제 준비 중...');
+
+    $.ajax({
+        url: `/resumes/${resumeId}/start-practice`,
+        method: 'POST',
+        contentType: 'application/json',
+        success: function (response) {
+            if (response && response.session_id) {
+                location.href = `/interviews/${response.session_id}/wait`;
+                return;
+            }
+
+            $btn.prop('disabled', false).text(originalText);
+            alert('세션 정보가 올바르지 않습니다.');
+        },
+        error: function (xhr) {
+            $btn.prop('disabled', false).text(originalText);
+
+            let message = '연습 시작 중 오류가 발생했습니다.';
+            if (xhr.responseJSON && xhr.responseJSON.detail) {
+                message = xhr.responseJSON.detail;
+            }
+
+            alert(message);
+        }
+    });
+}
+
+$(document).ready(function () {
+    $('#startPracticeBtn').on('click', function () {
+        const resumeId = $(this).data('resume-id');
+        startPractice(resumeId);
+    });
 });
