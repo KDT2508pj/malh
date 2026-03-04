@@ -304,19 +304,19 @@ def refine_transcript_with_guardrails(raw_text: str) -> RefineResult:
 
 
 def upsert_refine_result(db: Session, sel_id: int, result: RefineResult) -> TranscriptRefine:
-    row = db.query(TranscriptRefine).filter(TranscriptRefine.sel_id == sel_id).first()
+    row = db.query(TranscriptRefine).filter(TranscriptRefine.r_sel_id == sel_id).first()
     if row is None:
         row = TranscriptRefine(sel_id=sel_id)
         db.add(row)
 
-    row.raw_text = result.raw_text
-    row.refined_text = result.refined_text
-    row.edit_log = result.edit_log
-    row.refine_confidence = result.confidence
-    row.changed_ratio = int(round(result.changed_ratio * 100))
-    row.status = result.status
-    row.reject_reason = result.reject_reason
-    row.llm_model = result.llm_model
+    row.r_raw_text = result.raw_text
+    row.r_refined_text = result.refined_text
+    row.r_edit_log = result.edit_log
+    row.r_refine_confidence = result.confidence
+    row.r_changed_ratio = int(round(result.changed_ratio * 100))
+    row.r_status = result.status
+    row.r_reject_reason = result.reject_reason
+    row.r_llm_model = result.llm_model
 
     db.commit()
     db.refresh(row)

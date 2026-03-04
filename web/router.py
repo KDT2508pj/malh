@@ -434,7 +434,7 @@ async def result_analysis_stt(
             SelectQuestion.sel_id.label("sel_id"),
             Question.qust_question_text.label("question_text"),
             AudioRecording.duration_sec.label("duration_sec"),
-            Transcript.t_transcript_text.label("transcript_text"),
+            Transcript.transcript_text.label("transcript_text"),
             SpeechScoreSummary.sss_fluency_score.label("fluency_score"),
             SpeechScoreSummary.sss_clarity_score.label("clarity_score"),
             SpeechScoreSummary.sss_structure_score.label("structure_score"),
@@ -491,14 +491,14 @@ async def result_transcript(
             Question.qust_question_text.label("question_text"),
             AudioRecording.duration_sec.label("duration_sec"),
             AudioRecording.file_path.label("file_path"),
-            Transcript.t_transcript_text.label("transcript_text"),
-            TranscriptRefine.refined_text.label("refined_text"),
-            TranscriptRefine.status.label("refine_status"),
+            Transcript.transcript_text.label("transcript_text"),
+            TranscriptRefine.r_refined_text.label("refined_text"),
+            TranscriptRefine.r_status.label("refine_status"),
         )
         .join(Question, Question.qust_id == SelectQuestion.qust_id)
         .outerjoin(AudioRecording, AudioRecording.sel_id == SelectQuestion.sel_id)
         .outerjoin(Transcript, Transcript.sel_id == SelectQuestion.sel_id)
-        .outerjoin(TranscriptRefine, TranscriptRefine.sel_id == SelectQuestion.sel_id)
+        .outerjoin(TranscriptRefine, TranscriptRefine.r_sel_id == SelectQuestion.sel_id)
         .filter(SelectQuestion.inter_id == session_id, SelectQuestion.sel_id == sel_id)
         .first()
     )
@@ -730,7 +730,7 @@ async def run_stt(
         "recording_id": recording.recording_id,
         "upload_status": recording.upload_status,
         "transcript_id": transcript.transcript_id,
-        "transcript_text": transcript.t_transcript_text,
+        "transcript_text": transcript.transcript_text,
     }
 
 
@@ -748,7 +748,7 @@ async def build_speech_score(
             SelectQuestion.sel_id.label("sel_id"),
             Question.qust_question_text.label("question_text"),
             AudioRecording.duration_sec.label("duration_sec"),
-            Transcript.t_transcript_text.label("transcript_text"),
+            Transcript.transcript_text.label("transcript_text"),
         )
         .join(Question, Question.qust_id == SelectQuestion.qust_id)
         .outerjoin(AudioRecording, AudioRecording.sel_id == SelectQuestion.sel_id)
@@ -797,7 +797,7 @@ async def refine_transcript(
     row = (
         db.query(
             SelectQuestion.sel_id.label("sel_id"),
-            Transcript.t_transcript_text.label("transcript_text"),
+            Transcript.transcript_text.label("transcript_text"),
         )
         .outerjoin(Transcript, Transcript.sel_id == SelectQuestion.sel_id)
         .filter(SelectQuestion.inter_id == inter_id, SelectQuestion.sel_id == sel_id)
@@ -832,13 +832,13 @@ async def refine_transcript(
         "message": "Transcript refine completed.",
         "inter_id": inter_id,
         "sel_id": sel_id,
-        "status": saved.status,
-        "applied": saved.status == "APPLIED",
-        "confidence": saved.refine_confidence,
-        "changed_ratio": saved.changed_ratio,
-        "reject_reason": saved.reject_reason,
-        "raw_text": saved.raw_text,
-        "refined_text": saved.refined_text,
+        "status": saved.r_status,
+        "applied": saved.r_status == "APPLIED",
+        "confidence": saved.r_refine_confidence,
+        "changed_ratio": saved.r_changed_ratio,
+        "reject_reason": saved.r_reject_reason,
+        "raw_text": saved.r_raw_text,
+        "refined_text": saved.r_refined_text,
     }
 
 
@@ -854,16 +854,16 @@ async def get_transcript_payload(
     row = (
         db.query(
             SelectQuestion.sel_id.label("sel_id"),
-            Transcript.t_transcript_text.label("raw_text"),
-            TranscriptRefine.refined_text.label("refined_text"),
-            TranscriptRefine.status.label("refine_status"),
-            TranscriptRefine.refine_confidence.label("refine_confidence"),
-            TranscriptRefine.changed_ratio.label("changed_ratio"),
-            TranscriptRefine.reject_reason.label("reject_reason"),
-            TranscriptRefine.llm_model.label("llm_model"),
+            Transcript.transcript_text.label("raw_text"),
+            TranscriptRefine.r_refined_text.label("refined_text"),
+            TranscriptRefine.r_status.label("refine_status"),
+            TranscriptRefine.r_refine_confidence.label("refine_confidence"),
+            TranscriptRefine.r_changed_ratio.label("changed_ratio"),
+            TranscriptRefine.r_reject_reason.label("reject_reason"),
+            TranscriptRefine.r_llm_model.label("llm_model"),
         )
         .outerjoin(Transcript, Transcript.sel_id == SelectQuestion.sel_id)
-        .outerjoin(TranscriptRefine, TranscriptRefine.sel_id == SelectQuestion.sel_id)
+        .outerjoin(TranscriptRefine, TranscriptRefine.r_sel_id == SelectQuestion.sel_id)
         .filter(SelectQuestion.inter_id == inter_id, SelectQuestion.sel_id == sel_id)
         .first()
     )

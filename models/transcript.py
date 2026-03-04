@@ -15,7 +15,7 @@ class Transcript(Base):
     )
     sel_id = Column(Integer, ForeignKey("select_question.sel_id"), nullable=False, unique=True)
 
-    t_transcript_text = Column(
+    transcript_text = Column(
         Text,
         nullable=False,
         comment="STT 엔진이 음성 답변을 텍스트로 변환한 전체 전사 원문 데이터",
