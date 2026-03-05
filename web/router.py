@@ -1029,7 +1029,7 @@ async def result_transcript(
         .join(Question, Question.qust_id == SelectQuestion.qust_id)
         .outerjoin(AudioRecording, AudioRecording.sel_id == SelectQuestion.sel_id)
         .outerjoin(Transcript, Transcript.sel_id == SelectQuestion.sel_id)
-        .outerjoin(TranscriptRefine, TranscriptRefine.r_sel_id == SelectQuestion.sel_id)
+        .outerjoin(TranscriptRefine, TranscriptRefine.transcript_id == Transcript.transcript_id)
         .filter(SelectQuestion.inter_id == session_id, SelectQuestion.sel_id == sel_id)
         .first()
     )
@@ -1695,7 +1695,7 @@ async def get_transcript_payload(
             TranscriptRefine.r_llm_model.label("llm_model"),
         )
         .outerjoin(Transcript, Transcript.sel_id == SelectQuestion.sel_id)
-        .outerjoin(TranscriptRefine, TranscriptRefine.r_sel_id == SelectQuestion.sel_id)
+        .outerjoin(TranscriptRefine, TranscriptRefine.transcript_id == Transcript.transcript_id)
         .filter(SelectQuestion.inter_id == inter_id, SelectQuestion.sel_id == sel_id)
         .first()
     )
