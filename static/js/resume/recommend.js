@@ -3,7 +3,7 @@ function startAnalysis() {
     const selectedResumeId = resumeSelect.value;
     
     if (!selectedResumeId) {
-        alert("분석할 이력서가 없습니다. 이력서 등록 페이지로 이동합니다.");
+        alert("분석할 이력서가 없습니다. 이력서 관리 페이지로 이동합니다.");
         window.location.href = "/resumes"; 
         return;
     }

@@ -14,8 +14,11 @@
             <p class="section-desc">지원하려는 회사의 채용 공고를 입력하면 AI가 이력서를 분석해 드립니다.</p>
 
             <div class="form-group">
-                <label for="resumeSelect">분석할 이력서 선택</label>
-                <select id="resumeSelect">
+                <label for="resumeSelect" {% if not resumes %}onclick="startAnalysis()"{% endif %}>
+                    분석할 이력서 선택
+                </label>
+                
+                <select id="resumeSelect" {% if not resumes %}onmousedown="startAnalysis()"{% endif %}>
                     <option value="">이력서를 선택하세요</option>
                     
                     {% if resumes %}
@@ -34,8 +37,13 @@
             </div>
 
             <div class="form-group">
-                <label for="companyUrl">채용 공고 URL (또는 회사명/직무)</label>
-                <input type="text" id="companyUrl" placeholder="예: https://wanted.co.kr">
+                <label for="companyUrl">회사 URL</label>
+                <input type="text" id="companyUrl" placeholder="예: https://www.jype.com/ko">
+            </div>
+
+            <div class="form-group">
+                <label for="companyStack">회사 요구 기술 스택</label>
+                <input type="text" id="companyStack" placeholder="예: 비즈니스영어, 영어, 건설기계설비기사 자격, 일반기계기사 자격, 전기기사 자격">
             </div>
 
             <button type="button" class="analyze-btn" onclick="startAnalysis()">분석 시작하기</button>
