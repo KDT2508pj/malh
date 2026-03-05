@@ -11,8 +11,16 @@ class SelectQuestion(Base):
     __tablename__ = "select_question"
 
     sel_id = Column(Integer, primary_key=True, autoincrement=True)
-    inter_id = Column(Integer, ForeignKey("interview_session.inter_id"), nullable=False)
-    qust_id = Column(Integer, ForeignKey("question.qust_id"), nullable=False)
+    inter_id = Column(
+        Integer,
+        ForeignKey("interview_session.inter_id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    qust_id = Column(
+        Integer,
+        ForeignKey("question.qust_id", ondelete="CASCADE"),
+        nullable=False,
+    )
     sel_order_no = Column(Integer, nullable=False, comment="1~5")
     sel_asked_at = Column(DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP"))
     sel_answer_duration_sec = Column(

@@ -65,8 +65,14 @@
                         <div class="info-row">
                             <span class="info-label">분석 상태</span>
                             <span class="info-value" style="color:var(--primary-orange)">
-                                {% if resume.classification %}
+                                {% if resume.resume_status == "DONE" %}
                                     분석 완료
+                                {% elif resume.resume_status == "FAILED" %}
+                                    분석 실패
+                                {% elif resume.resume_status in ["CLASSIFYING", "STRUCTURING", "KEYWORDS_EXTRACTING", "QUESTION_GENERATING"] %}
+                                    분석 중
+                                {% elif resume.resume_status == "KEYWORDS_DONE" %}
+                                    질문 생성 대기
                                 {% else %}
                                     분석 대기중
                                 {% endif %}
@@ -146,7 +152,7 @@
                 <div class="upload-box" id="dropZone">
                     <div class="upload-icon">📁</div>
                     <p class="upload-text">파일을 이 곳으로 드래그하거나 클릭하세요</p>
-                    <p class="upload-sub">PDF, Word (최대 10MB)</p>
+                    <p class="upload-sub">PDF, DOCX (최대 10MB)</p>
                 </div>
 
                 <!-- ✅ 유지: JS와 연결되는 input -->

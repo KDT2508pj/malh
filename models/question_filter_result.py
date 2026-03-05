@@ -8,7 +8,11 @@ class QuestionFilterResult(Base):
     __tablename__ = "question_filter_result"
 
     qfr_id = Column(Integer, primary_key=True, autoincrement=True)
-    qust_id = Column(Integer, ForeignKey("question.qust_id"), nullable=False)
+    qust_id = Column(
+        Integer,
+        ForeignKey("question.qust_id", ondelete="CASCADE"),
+        nullable=False,
+    )
     qfr_reasons = Column(
         JSON,
         nullable=True,
