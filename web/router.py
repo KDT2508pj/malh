@@ -1,5 +1,5 @@
 from pathlib import Path
-
+import logging
 from fastapi import (
     APIRouter,
     Depends,
@@ -9,6 +9,7 @@ from fastapi import (
     Request,
     UploadFile,
     status,
+    BackgroundTasks,
 )
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
@@ -31,6 +32,7 @@ from services.resume_service import (
     create_resume_record,
     delete_resume,
     get_resume_analysis_result,
+    update_resume_status,
 )
 
 from models.question_set import QuestionSet
@@ -57,6 +59,26 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 web_router = APIRouter()
+
+logger = logging.getLogger(__name__)
+
+RUNNING_RESUME_STATUSES = {
+    "CLASSIFYING",
+    "STRUCTURING",
+    "KEYWORDS_EXTRACTING",
+    "QUESTION_GENERATING",
+}
+
+RESUME_PROGRESS_MAP = {
+    "UPLOADED": 5,
+    "CLASSIFYING": 20,
+    "STRUCTURING": 45,
+    "KEYWORDS_EXTRACTING": 65,
+    "KEYWORDS_DONE": 80,
+    "QUESTION_GENERATING": 90,
+    "DONE": 100,
+    "FAILED": 100,
+}
 
 def _get_login_user(request: Request, db: Session) -> User:
     login_user = request.cookies.get("login_user")
@@ -102,6 +124,69 @@ def _get_latest_session_id_by_resume(db: Session, resume_id: int) -> int | None:
         .first()
     )
     return int(row.inter_id) if row else None
+
+def _run_resume_pipeline_background(resume_id: int, model: str) -> None:
+    db_gen = get_db()
+    db = next(db_gen)
+
+    try:
+        logger.info("RESUME_PIPELINE_START resume_id=%s model=%s", resume_id, model)
+
+        analyze_saved_resume(
+            db=db,
+            resume_id=resume_id,
+            model=model,
+        )
+
+        resume = (
+            db.query(Resume)
+            .filter(Resume.resume_id == resume_id)
+            .first()
+        )
+        if not resume:
+            return
+
+        update_resume_status(db, resume, "QUESTION_GENERATING")
+
+        ensure_questions_generated_for_resume(
+            db=db,
+            resume_id=resume_id,
+            target_count=30,
+            purpose="DEFAULT",
+            model=model,
+        )
+
+        resume = (
+            db.query(Resume)
+            .filter(Resume.resume_id == resume_id)
+            .first()
+        )
+        if resume:
+            update_resume_status(db, resume, "DONE")
+
+        logger.info("RESUME_PIPELINE_DONE resume_id=%s", resume_id)
+
+    except Exception as e:
+        db.rollback()
+
+        logger.exception("RESUME_PIPELINE_FAIL resume_id=%s err=%s", resume_id, e)
+
+        resume = (
+            db.query(Resume)
+            .filter(Resume.resume_id == resume_id)
+            .first()
+        )
+        if resume:
+            try:
+                update_resume_status(db, resume, "FAILED", str(e))
+            except Exception:
+                db.rollback()
+
+    finally:
+        try:
+            db_gen.close()
+        except Exception:
+            pass
 
 
 @web_router.get("/")
@@ -253,43 +338,46 @@ async def resume_feedback(
     )
 
 @web_router.post("/resumes/{resume_id}/analyze")
-async def analyze_resume(
+@web_router.post("/resumes/{resume_id}/analyze/start")
+async def start_resume_analysis(
     request: Request,
     resume_id: int,
+    background_tasks: BackgroundTasks,
     model: str = Form(DEFAULT_MODEL),
     db: Session = Depends(get_db),
 ):
     user = _get_login_user(request, db)
-    _get_owned_resume(db, user.user_id, resume_id)
+    resume = _get_owned_resume(db, user.user_id, resume_id)
 
-    analyze_saved_resume(
-        db=db,
-        resume_id=resume_id,
-        model=model,
-    )
+    # ✅ 이미 완료된 경우
+    if resume.resume_status == "DONE":
+        return {
+            "ok": True,
+            "resume_id": resume_id,
+            "status": resume.resume_status,
+            "message": "이미 분석 완료된 이력서입니다.",
+        }
 
-    question_set = ensure_questions_generated_for_resume(
-        db=db,
-        resume_id=resume_id,
-        target_count=30,
-        purpose="DEFAULT",
-        model=model,
-    )
+    # ✅ 이미 진행 중인 경우
+    if resume.resume_status in RUNNING_RESUME_STATUSES:
+        return {
+            "ok": True,
+            "resume_id": resume_id,
+            "status": resume.resume_status,
+            "message": "이미 분석이 진행 중입니다.",
+        }
 
-    selected_count = (
-        db.query(Question)
-        .filter(
-            Question.set_id == question_set.set_id,
-            Question.qust_is_selected == 1,
-        )
-        .count()
-    )
+    # ✅ 시작 상태로 변경
+    update_resume_status(db, resume, "CLASSIFYING")
+
+    # ✅ 백그라운드 실행
+    background_tasks.add_task(_run_resume_pipeline_background, resume_id, model)
 
     return {
         "ok": True,
         "resume_id": resume_id,
-        "question_set_id": question_set.set_id,
-        "selected_count": selected_count,
+        "status": "CLASSIFYING",
+        "message": "분석이 시작되었습니다.",
     }
 
 @web_router.post("/resumes/{resume_id}/delete")
@@ -303,6 +391,23 @@ async def remove_resume(
 
     delete_resume(db=db, resume_id=resume_id)
     return RedirectResponse(url="/resumes", status_code=status.HTTP_303_SEE_OTHER)
+
+@web_router.get("/resumes/{resume_id}/status")
+async def get_resume_status(
+    request: Request,
+    resume_id: int,
+    db: Session = Depends(get_db),
+):
+    user = _get_login_user(request, db)
+    resume = _get_owned_resume(db, user.user_id, resume_id)
+
+    return {
+        "resume_id": resume.resume_id,
+        "status": resume.resume_status,
+        "progress": RESUME_PROGRESS_MAP.get(resume.resume_status, 0),
+        "error_message": resume.resume_error_message,
+        "detail_url": f"/resumes/{resume.resume_id}",
+    }
 
 # question
 @web_router.post("/questions/generate/{resume_id}")

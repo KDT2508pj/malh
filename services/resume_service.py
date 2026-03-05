@@ -4,6 +4,7 @@ import os
 import re
 from typing import List, Optional
 import json
+import logging
 
 from dotenv import load_dotenv
 from fastapi import HTTPException
@@ -38,10 +39,31 @@ from services.prompt.resume.structure_prompt import (
     build_structure_user_prompt,
 )
 
+logger = logging.getLogger(__name__)
+
 load_dotenv()
 
 DEFAULT_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
 
+def update_resume_status(
+    db: Session,
+    resume: Resume,
+    status_value: str,
+    error_message: Optional[str] = None,
+) -> Resume:
+    resume.resume_status = status_value
+    resume.resume_error_message = (error_message or "")[:255] or None
+    db.add(resume)
+    db.commit()
+    db.refresh(resume)
+
+    logger.info(
+        "RESUME_STATUS_UPDATED resume_id=%s status=%s error=%s",
+        resume.resume_id,
+        resume.resume_status,
+        resume.resume_error_message,
+    )
+    return resume
 
 class ResumeFileError(Exception):
     def __init__(self, detail: str, status_code: int = 400):
@@ -252,6 +274,8 @@ def create_resume_record(
         resume_file_size=len(data),
         resume_extracted_text=extracted_text,
         resume_sha256=sha256_bytes(data),
+        resume_status="UPLOADED",
+        resume_error_message=None,
     )
     db.add(resume)
     db.commit()
@@ -405,16 +429,16 @@ def analyze_saved_resume(
 ) -> None:
     resume = get_resume_by_id(db, resume_id)
 
-    classification_exists = (
+    classification_row = (
         db.query(ResumeClassification)
         .filter(ResumeClassification.resume_id == resume_id)
         .first()
     )
 
-    structure_exists = (
-    db.query(ResumeStructured)
-    .filter(ResumeStructured.resume_id == resume_id)
-    .first()
+    structure_row = (
+        db.query(ResumeStructured)
+        .filter(ResumeStructured.resume_id == resume_id)
+        .first()
     )
 
     keyword_exists = (
@@ -423,13 +447,16 @@ def analyze_saved_resume(
         .first()
     )
 
-    if classification_exists and keyword_exists and structure_exists:
+    # 이미 분석 완료된 경우 상태 보정
+    if classification_row and structure_row and keyword_exists:
+        if resume.resume_status != "DONE":
+            update_resume_status(db, resume, "KEYWORDS_DONE")
         return
 
-    classification_row = classification_exists
-
-    if not classification_exists:
+    if not classification_row:
         try:
+            update_resume_status(db, resume, "CLASSIFYING")
+
             classification_result = classify_resume_llm(
                 resume_text=resume.resume_extracted_text,
                 model=model,
@@ -464,10 +491,14 @@ def analyze_saved_resume(
                 error_message=str(e),
             )
             db.commit()
+
+            update_resume_status(db, resume, "FAILED", str(e))
             raise HTTPException(status_code=500, detail=f"이력서 분류 실패: {e}") from e
-        
-    if not structure_exists:
+
+    if not structure_row:
         try:
+            update_resume_status(db, resume, "STRUCTURING")
+
             structure_result = analyze_resume_structure_llm(
                 resume_text=resume.resume_extracted_text,
                 job_family=classification_row.class_job_family if classification_row else None,
@@ -495,6 +526,7 @@ def analyze_saved_resume(
             )
             db.add(structure_row)
             db.commit()
+            db.refresh(structure_row)
 
         except Exception as e:
             db.rollback()
@@ -507,10 +539,24 @@ def analyze_saved_resume(
                 error_message=str(e),
             )
             db.commit()
+
+            update_resume_status(db, resume, "FAILED", str(e))
             raise HTTPException(status_code=500, detail=f"이력서 구조화 분석 실패: {e}") from e
 
     if not keyword_exists:
         try:
+            if structure_row is None:
+                structure_row = (
+                    db.query(ResumeStructured)
+                    .filter(ResumeStructured.resume_id == resume_id)
+                    .first()
+                )
+
+            if structure_row is None:
+                raise RuntimeError("키워드 분석 전에 구조화 결과를 찾을 수 없습니다.")
+
+            update_resume_status(db, resume, "KEYWORDS_EXTRACTING")
+
             structured_payload = build_structured_payload(structure_row)
 
             keyword_result = analyze_resume_keywords_llm(
@@ -542,6 +588,8 @@ def analyze_saved_resume(
 
             db.commit()
 
+            update_resume_status(db, resume, "KEYWORDS_DONE")
+
         except Exception as e:
             db.rollback()
             save_llm_run_failed(
@@ -553,6 +601,8 @@ def analyze_saved_resume(
                 error_message=str(e),
             )
             db.commit()
+
+            update_resume_status(db, resume, "FAILED", str(e))
             raise HTTPException(status_code=500, detail=f"이력서 키워드 분석 실패: {e}") from e
         
 def delete_resume(db: Session, resume_id: int) -> None:
@@ -561,21 +611,8 @@ def delete_resume(db: Session, resume_id: int) -> None:
         raise HTTPException(status_code=404, detail="이력서를 찾을 수 없습니다.")
 
     try:
-        db.query(ResumeClassification).filter(
-            ResumeClassification.resume_id == resume_id
-        ).delete(synchronize_session=False)
-
-        db.query(ResumeStructured).filter(
-            ResumeStructured.resume_id == resume_id
-        ).delete(synchronize_session=False)
-
-        db.query(ResumeKeyword).filter(
-            ResumeKeyword.resume_id == resume_id
-        ).delete(synchronize_session=False)
-
         db.delete(resume)
         db.commit()
-
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"이력서 삭제 실패: {e}") from e

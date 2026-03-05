@@ -31,9 +31,8 @@ $(function () {
     // 3. 파일 업로드 기능 (드래그 앤 드롭 & 클릭)
 
     // ✅ 유지: 클릭 시 파일 탐색기 열기
-    $dropZone.on('click', function (e) {
-        if (e.target !== this) return;
-        $fileInput.trigger('click');
+    $dropZone.on('click', function () {
+        $fileInput[0].click();
     });
 
     // ✅ 유지: click 재귀 방지

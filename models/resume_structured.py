@@ -9,7 +9,13 @@ class ResumeStructured(Base):
     __tablename__ = "resume_structured"
 
     structured_id = Column(Integer, primary_key=True, autoincrement=True)
-    resume_id = Column(Integer, ForeignKey("resume.resume_id"), nullable=False, unique=True)
+
+    resume_id = Column(
+        Integer,
+        ForeignKey("resume.resume_id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,
+    )
     llm_id = Column(Integer, ForeignKey("llm_run.llm_id"), nullable=False)
 
     structured_position = Column(String(255), nullable=True, comment="백엔드 개발자, AI 개발자 등")

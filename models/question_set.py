@@ -11,7 +11,11 @@ class QuestionSet(Base):
     __tablename__ = "question_set"
 
     set_id = Column(Integer, primary_key=True, autoincrement=True)
-    resume_id = Column(Integer, ForeignKey("resume.resume_id"), nullable=False)
+    resume_id = Column(
+        Integer,
+        ForeignKey("resume.resume_id", ondelete="CASCADE"),
+        nullable=False,
+    )
     set_attempt = Column(
         Integer,
         nullable=True,
@@ -32,5 +36,14 @@ class QuestionSet(Base):
     )
 
     resume = relationship("Resume", back_populates="question_sets")
-    questions = relationship("Question", back_populates="question_set")
-    interview_sessions = relationship("InterviewSession", back_populates="question_set")
+    questions = relationship(
+        "Question",
+        back_populates="question_set",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    interview_sessions = relationship(
+        "InterviewSession",
+        back_populates="question_set",
+        passive_deletes=True,
+    )

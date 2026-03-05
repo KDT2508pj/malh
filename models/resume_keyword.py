@@ -11,7 +11,11 @@ class ResumeKeyword(Base):
     __tablename__ = "resume_keyword"
 
     keyword_id = Column(Integer, primary_key=True, autoincrement=True)
-    resume_id = Column(Integer, ForeignKey("resume.resume_id"), nullable=False)
+    resume_id = Column(
+        Integer,
+        ForeignKey("resume.resume_id", ondelete="CASCADE"),
+        nullable=False,
+    )
     llm_id = Column(Integer, ForeignKey("llm_run.llm_id"), nullable=False)
     keyword_keyword = Column(
         String(100),
