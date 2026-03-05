@@ -112,5 +112,10 @@ function handleSignup(event) {
         return false;
     }
 
+    // ✅ 추가된 부분: 알림창을 먼저 띄우고 폼을 제출합니다.
+    event.preventDefault(); // 기본 폼 제출을 잠깐 막음
+    alert("회원가입이 완료되었습니다! 로그인을 해주세요"); // 알림창 띄우기
+    event.target.submit(); // 사용자가 '확인'을 누르면 폼을 진짜로 제출
+
     return true;
 }

@@ -1,4 +1,8 @@
 document.addEventListener("DOMContentLoaded", function() {
+    // ✅ 1. 현재 비밀번호 요소 추가
+    const currentPwInput = document.getElementById('currentPw');
+    const currentPwError = document.getElementById('currentPwError');
+    
     const newPwInput = document.getElementById('newPw');
     const confirmPwInput = document.getElementById('confirmPw');
     const newPwError = document.getElementById('newPwError');
@@ -17,7 +21,18 @@ document.addEventListener("DOMContentLoaded", function() {
         errorElement.style.display = 'none';
     }
 
-    // [Logic 1] 새 비밀번호 유효성 검사
+    // ✅ [Logic 1] 현재 비밀번호 유효성 검사 (빈 값인지만 체크)
+    window.validateCurrentPw = function() {
+        const val = currentPwInput.value;
+        if (!val) {
+            showError(currentPwInput, currentPwError, "현재 비밀번호를 입력해 주세요.");
+            return false;
+        }
+        hideError(currentPwInput, currentPwError);
+        return true;
+    };
+
+    // [Logic 2] 새 비밀번호 유효성 검사
     window.validateNewPw = function() {
         const val = newPwInput.value;
         const regex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$/;
@@ -35,7 +50,7 @@ document.addEventListener("DOMContentLoaded", function() {
         return true;
     };
 
-    // [Logic 2] 비밀번호 확인 검사
+    // [Logic 3] 비밀번호 확인 검사
     window.validateConfirmPw = function() {
         const val = confirmPwInput.value;
         const original = newPwInput.value;
@@ -54,31 +69,38 @@ document.addEventListener("DOMContentLoaded", function() {
     };
 
     // 실시간 검사 (blur 이벤트 바인딩)
+    currentPwInput.addEventListener('blur', window.validateCurrentPw); // 추가됨
     newPwInput.addEventListener('blur', window.validateNewPw);
     confirmPwInput.addEventListener('blur', window.validateConfirmPw);
 
-    // [Logic 3] 변경하기 버튼 클릭 시 실제 API 통신
+    // [Logic 4] 변경하기 버튼 클릭 시 실제 API 통신
     window.submitChange = async function() {
+        // ✅ 검사 로직에 현재 비밀번호 검사 추가
+        const isCurrentValid = window.validateCurrentPw();
         const isNewValid = window.validateNewPw();
         const isConfirmValid = window.validateConfirmPw();
 
-        if (isNewValid && isConfirmValid) {
+        if (isCurrentValid && isNewValid && isConfirmValid) {
+            const currentPw = currentPwInput.value;
             const newPw = newPwInput.value;
 
             try {
-                // 백엔드 API로 새 비밀번호 전송
+                // 백엔드 API로 현재 비밀번호와 새 비밀번호 함께 전송
                 const response = await fetch('/auth/change-password', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ new_password: newPw })
+                    body: JSON.stringify({ 
+                        current_password: currentPw, // ✅ 백엔드 요청 데이터에 추가됨
+                        new_password: newPw 
+                    })
                 });
                 
                 const result = await response.json();
 
                 if (response.ok) {
-                    // ✅ 프론트엔드에서 확실하게 좀비 쿠키 강제 삭제! (경로별로 모두 폭파)
+                    // 프론트엔드에서 확실하게 좀비 쿠키 강제 삭제!
                     document.cookie = "login_user=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
                     document.cookie = "login_user=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/account;"; 
                     document.cookie = "login_user=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/auth;"; 
@@ -87,11 +109,12 @@ document.addEventListener("DOMContentLoaded", function() {
                     alert(result.message || "비밀번호가 성공적으로 변경되었습니다. 다시 로그인해 주세요.");
                     location.href = "/auth/login";
                 } else {
-                    // ✅ 실패 시 (기존 비밀번호와 동일한 경우) alert를 띄우고 입력창 비우기
+                    // 실패 시 (현재 비밀번호 틀림, 기존 비밀번호와 동일 등) alert 띄우고 입력창 비우기
                     alert(result.detail || "비밀번호 변경에 실패했습니다.");
+                    currentPwInput.value = ''; // 현재 비밀번호 창 비우기
                     newPwInput.value = '';
                     confirmPwInput.value = '';
-                    newPwInput.focus();
+                    currentPwInput.focus(); // 다시 현재 비밀번호 창으로 포커스 이동
                 }
             } catch (error) {
                 console.error("비밀번호 변경 에러:", error);
