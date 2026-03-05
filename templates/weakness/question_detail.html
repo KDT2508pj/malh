@@ -1,9 +1,9 @@
 {% extends "layouts/base.html" %}
 
-{% block title %}약점 보강 상세 - 말해뭐해{% endblock %}
+{% block title %}약점 보강 상세 - 말해봐해{% endblock %}
 
 {% block head %}
-<link rel="stylesheet" href="/static/css/weakness/weakness_detail.css">
+<link rel="stylesheet" href="/static/css/weakness/weakness_detail.css?v=20260306">
 {% endblock %}
 
 {% block content %}
@@ -14,24 +14,27 @@
 
             <div class="question-card">
                 <div class="question-number">Weakness Q{{ weakness_item.sel_order_no }}</div>
-                <div class="question-text">{{ weakness_item.question_text }}</div>
+                <div id="standby-question-text" class="question-text hidden">{{ weakness_item.question_text }}</div>
+                <div id="standby-placeholder" class="question-placeholder">질문 미리보기는 시작 전/녹음 중 포함 총 2회, 각 5초 가능합니다.</div>
+                <div id="preview-countdown" class="preview-countdown"></div>
             </div>
 
             <div class="record-area">
-                <div class="mic-circle" onclick="startRecordingFlow()">🎤</div>
-                <button class="record-btn" onclick="startRecordingFlow()">녹음하기</button>
-                <p class="record-guide">버튼을 누르면 마이크 권한 확인 후 녹음이 시작됩니다.</p>
+                <button id="start-interview-btn" class="record-btn" onclick="startInterviewFlow()">보강 시작</button>
+                <p id="record-guide" class="record-guide">시작 시 질문을 5초 보여준 뒤 녹음이 시작됩니다. 녹음 중에도 다시보기 버튼을 사용할 수 있습니다.</p>
             </div>
 
-            <a href="/interviews/{{ session_id }}/weakness" class="back-link">← 약점 보강 리스트로 돌아가기</a>
+            <a href="/interviews/{{ session_id }}/weakness" class="back-link">약점 보강 목록으로 돌아가기</a>
         </div>
 
         <div id="mode-recording" class="mode-container">
-            <div class="page-label-recording">🔴 보강 녹음 중 (Reinforcement)</div>
+            <div class="page-label-recording">보강 녹음 중 (Reinforcement)</div>
 
             <div class="question-card" style="padding: 50px 40px; margin-bottom: 40px;">
                 <div class="question-number">Weakness Q{{ weakness_item.sel_order_no }}</div>
-                <div class="question-text">{{ weakness_item.question_text }}</div>
+                <div id="recording-question-text" class="question-text hidden">{{ weakness_item.question_text }}</div>
+                <div id="recording-placeholder" class="question-placeholder">녹음 중 질문 다시보기 버튼으로 5초 확인할 수 있습니다.</div>
+                <div id="recording-preview-countdown" class="preview-countdown"></div>
             </div>
 
             <div class="recording-visual">
@@ -40,6 +43,10 @@
             </div>
 
             <div class="timer" id="timer">00:00</div>
+
+            <div class="recording-actions">
+                <button id="review-question-btn" class="review-btn" onclick="reviewQuestionDuringRecording()">질문 다시보기 (5초)</button>
+            </div>
 
             <button class="stop-btn" onclick="finishRecording()">
                 <div class="stop-icon"></div>
@@ -51,5 +58,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/weakness/weakness_detail.js"></script>
+<script src="/static/js/weakness/weakness_detail.js?v=20260306"></script>
 {% endblock %}

@@ -1,0 +1,126 @@
+from __future__ import annotations
+
+import json
+from dataclasses import dataclass
+from typing import Any
+
+from core.config import settings
+from models.speech_feedback import SpeechFeedback
+from sqlalchemy.orm import Session
+
+
+@dataclass
+class SpeechFeedbackResult:
+    report_md: str
+    coaching_md: str
+    model: str
+
+
+def _get_openai_client():
+    api_key = settings.OPENAI_API_KEY or ""
+    if not api_key.strip():
+        raise RuntimeError("OPENAI_API_KEY is not configured.")
+    try:
+        from openai import OpenAI  # type: ignore
+    except ImportError as exc:
+        raise RuntimeError("openai package is not installed.") from exc
+    return OpenAI(api_key=api_key)
+
+
+def _build_messages(question_text: str, score_payload: dict[str, Any]) -> tuple[str, str]:
+    compact_score = {
+        "fluency_score": score_payload.get("fluency_score"),
+        "clarity_score": score_payload.get("clarity_score"),
+        "structure_score": score_payload.get("structure_score"),
+        "length_score": score_payload.get("length_score"),
+        "delivery_score": score_payload.get("delivery_score"),
+        "content_score": score_payload.get("content_score"),
+        "confidence_score": score_payload.get("confidence_score"),
+        "metrics": score_payload.get("metrics", {}),
+    }
+    system_msg = (
+        "You are a Korean interview speaking coach. "
+        "Use only provided speech metrics to generate concise, actionable feedback. "
+        "Do not fabricate transcript quotes. "
+        "Output strict JSON only."
+    )
+    user_msg = (
+        "면접 발화 지표 기반으로 아래 두 항목을 작성해 주세요.\n"
+        "1) 분석 리포트: 강점/약점/핵심 원인 요약 (3~5개 bullet)\n"
+        "2) 코칭 피드백: 다음 답변에서 바로 적용할 행동 지침 (3~5개 bullet)\n\n"
+        f"질문: {question_text}\n"
+        f"지표: {json.dumps(compact_score, ensure_ascii=False)}\n\n"
+        "JSON schema:\n"
+        "{"
+        "\"analysis_report\": [string, ...],"
+        "\"coaching_feedback\": [string, ...]"
+        "}"
+    )
+    return system_msg, user_msg
+
+
+def generate_speech_feedback(
+    question_text: str,
+    score_payload: dict[str, Any],
+) -> SpeechFeedbackResult:
+    client = _get_openai_client()
+    model = settings.OPENAI_MODEL
+    sys_msg, user_msg = _build_messages(question_text=question_text, score_payload=score_payload)
+
+    response = client.chat.completions.create(
+        model=model,
+        temperature=0.2,
+        messages=[
+            {"role": "system", "content": sys_msg},
+            {"role": "user", "content": user_msg},
+        ],
+        response_format={"type": "json_object"},
+    )
+    content = (response.choices[0].message.content or "").strip()
+    if not content:
+        raise RuntimeError("LLM returned empty feedback.")
+
+    try:
+        parsed = json.loads(content)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError("LLM feedback is not valid JSON.") from exc
+
+    report_lines = parsed.get("analysis_report", [])
+    coaching_lines = parsed.get("coaching_feedback", [])
+    if not isinstance(report_lines, list):
+        report_lines = []
+    if not isinstance(coaching_lines, list):
+        coaching_lines = []
+
+    report_clean = [str(x).strip() for x in report_lines if str(x).strip()]
+    coaching_clean = [str(x).strip() for x in coaching_lines if str(x).strip()]
+
+    if not report_clean or not coaching_clean:
+        raise RuntimeError("LLM feedback fields are empty.")
+
+    report_md = "\n".join(f"- {line}" for line in report_clean[:5])
+    coaching_md = "\n".join(f"- {line}" for line in coaching_clean[:5])
+    return SpeechFeedbackResult(report_md=report_md, coaching_md=coaching_md, model=model)
+
+
+def upsert_speech_feedback(db: Session, sel_id: int, result: SpeechFeedbackResult) -> SpeechFeedback:
+    row = db.query(SpeechFeedback).filter(SpeechFeedback.sel_id == sel_id).first()
+    if row is None:
+        row = SpeechFeedback(
+            sel_id=sel_id,
+            sfb_report_md=result.report_md,
+            sfb_coaching_md=result.coaching_md,
+            sfb_model=result.model,
+        )
+        db.add(row)
+    else:
+        row.sfb_report_md = result.report_md
+        row.sfb_coaching_md = result.coaching_md
+        row.sfb_model = result.model
+    db.commit()
+    db.refresh(row)
+    return row
+
+
+def get_speech_feedback(db: Session, sel_id: int) -> SpeechFeedback | None:
+    return db.query(SpeechFeedback).filter(SpeechFeedback.sel_id == sel_id).first()

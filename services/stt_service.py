@@ -118,10 +118,10 @@ def transcribe_audio_file(audio_path: Path) -> str:
 def upsert_transcript(db: Session, sel_id: int, transcript_text: str) -> Transcript:
     transcript = db.query(Transcript).filter(Transcript.sel_id == sel_id).first()
     if transcript is None:
-        transcript = Transcript(sel_id=sel_id, t_transcript_text=transcript_text)
+        transcript = Transcript(sel_id=sel_id, transcript_text=transcript_text)
         db.add(transcript)
     else:
-        transcript.t_transcript_text = transcript_text
+        transcript.transcript_text = transcript_text
     db.commit()
     db.refresh(transcript)
     return transcript

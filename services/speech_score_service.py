@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import json
 import math
 import re
 from dataclasses import dataclass
 from statistics import pstdev
 from typing import Any
 
+from models.speech_score_detail import SpeechScoreDetail
 from models.speech_score_summary import SpeechScoreSummary
 from sqlalchemy.orm import Session
 
@@ -325,3 +327,40 @@ def upsert_speech_summary(db: Session, sel_id: int, score: SpeechScoreResult) ->
     db.commit()
     db.refresh(row)
     return row
+
+
+def _score_to_payload_dict(score: SpeechScoreResult) -> dict[str, Any]:
+    return {
+        "fluency_score": score.fluency_score,
+        "clarity_score": score.clarity_score,
+        "structure_score": score.structure_score,
+        "length_score": score.length_score,
+        "delivery_score": score.delivery_score,
+        "content_score": score.content_score,
+        "confidence_score": score.confidence_score,
+        "metrics": score.metrics,
+    }
+
+
+def upsert_speech_detail(db: Session, sel_id: int, score: SpeechScoreResult) -> SpeechScoreDetail:
+    payload_json = json.dumps(_score_to_payload_dict(score), ensure_ascii=False)
+    row = db.query(SpeechScoreDetail).filter(SpeechScoreDetail.sel_id == sel_id).first()
+    if row is None:
+        row = SpeechScoreDetail(sel_id=sel_id, ssd_payload_json=payload_json)
+        db.add(row)
+    else:
+        row.ssd_payload_json = payload_json
+    db.commit()
+    db.refresh(row)
+    return row
+
+
+def get_speech_detail_payload(db: Session, sel_id: int) -> dict[str, Any] | None:
+    row = db.query(SpeechScoreDetail).filter(SpeechScoreDetail.sel_id == sel_id).first()
+    if row is None or not (row.ssd_payload_json or "").strip():
+        return None
+    try:
+        payload = json.loads(row.ssd_payload_json)
+    except Exception:
+        return None
+    return payload if isinstance(payload, dict) else None

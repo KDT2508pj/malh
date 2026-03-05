@@ -1,4 +1,6 @@
 from pathlib import Path
+import threading
+import time
 
 from fastapi import (
     APIRouter,
@@ -13,14 +15,13 @@ from fastapi import (
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
-from core.database import get_db
+from core.database import SessionLocal, get_db
 from models.user import User
 from models.audio_recording import AudioRecording
 from models.interview_session import InterviewSession
 from models.question import Question
 from models.resume import Resume
 from models.select_question import SelectQuestion
-from models.speech_score_summary import SpeechScoreSummary
 from models.transcript import Transcript
 from models.transcript_refine import TranscriptRefine
 from fastapi.responses import RedirectResponse
@@ -38,7 +39,17 @@ from models.question_filter_result import QuestionFilterResult
 from services.question_service import ensure_questions_generated_for_resume
 from services.question_service import generate_questions_for_resume
 from services.question_service import get_latest_completed_question_set
-from services.speech_score_service import calculate_speech_scores, upsert_speech_summary
+from services.speech_score_service import (
+    calculate_speech_scores,
+    get_speech_detail_payload,
+    upsert_speech_detail,
+    upsert_speech_summary,
+)
+from services.speech_feedback_service import (
+    generate_speech_feedback,
+    get_speech_feedback,
+    upsert_speech_feedback,
+)
 
 from sqlalchemy.sql import func
 
@@ -57,6 +68,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 web_router = APIRouter()
+SUBMIT_ANALYSIS_PROGRESS: dict[int, dict[str, object]] = {}
+SUBMIT_ANALYSIS_LOCK = threading.Lock()
 
 def _get_login_user(request: Request, db: Session) -> User:
     login_user = request.cookies.get("login_user")
@@ -102,6 +115,174 @@ def _get_latest_session_id_by_resume(db: Session, resume_id: int) -> int | None:
         .first()
     )
     return int(row.inter_id) if row else None
+
+
+def _update_submit_progress(inter_id: int, **fields: object) -> None:
+    with SUBMIT_ANALYSIS_LOCK:
+        base = SUBMIT_ANALYSIS_PROGRESS.get(inter_id, {})
+        base.update(fields)
+        SUBMIT_ANALYSIS_PROGRESS[inter_id] = base
+
+
+def _run_submit_analysis_job(inter_id: int) -> None:
+    db = SessionLocal()
+    try:
+        rows = (
+            db.query(
+                SelectQuestion.sel_id.label("sel_id"),
+                SelectQuestion.sel_order_no.label("sel_order_no"),
+                Question.qust_question_text.label("question_text"),
+                AudioRecording.file_path.label("file_path"),
+                AudioRecording.duration_sec.label("duration_sec"),
+                Transcript.transcript_text.label("transcript_text"),
+            )
+            .join(Question, Question.qust_id == SelectQuestion.qust_id)
+            .outerjoin(AudioRecording, AudioRecording.sel_id == SelectQuestion.sel_id)
+            .outerjoin(Transcript, Transcript.sel_id == SelectQuestion.sel_id)
+            .filter(SelectQuestion.inter_id == inter_id)
+            .order_by(SelectQuestion.sel_order_no.asc(), SelectQuestion.sel_id.asc())
+            .all()
+        )
+
+        total = len(rows)
+        if total == 0:
+            _update_submit_progress(
+                inter_id,
+                status="failed",
+                done=True,
+                ok=False,
+                total=0,
+                completed=0,
+                failed_count=0,
+                message="Interview session questions not found.",
+            )
+            return
+
+        _update_submit_progress(
+            inter_id,
+            status="running",
+            total=total,
+            completed=0,
+            failed_count=0,
+            message="분석을 시작합니다.",
+            done=False,
+            ok=False,
+        )
+
+        processed: list[dict[str, int | str]] = []
+        failed: list[dict[str, int | str]] = []
+
+        for index, row in enumerate(rows, start=1):
+            sel_id = int(row.sel_id)
+            sel_order_no = int(row.sel_order_no)
+            _update_submit_progress(
+                inter_id,
+                current_index=index,
+                current_sel_id=sel_id,
+                current_sel_order_no=sel_order_no,
+                message=f"Q{sel_order_no} 분석 중...",
+            )
+
+            if not (row.file_path or "").strip():
+                failed.append(
+                    {
+                        "sel_id": sel_id,
+                        "sel_order_no": sel_order_no,
+                        "reason": "Recording is missing.",
+                    }
+                )
+                _update_submit_progress(
+                    inter_id,
+                    completed=index,
+                    failed_count=len(failed),
+                    message=f"Q{sel_order_no} 녹음 없음",
+                )
+                continue
+
+            transcript_text = (row.transcript_text or "").strip()
+            if not transcript_text:
+                _update_submit_progress(inter_id, message=f"Q{sel_order_no} STT 처리 중...")
+                try:
+                    _, transcript = run_stt_and_update(db=db, inter_id=inter_id, sel_id=sel_id)
+                    transcript_text = (transcript.transcript_text or "").strip()
+                except Exception as exc:
+                    failed.append(
+                        {
+                            "sel_id": sel_id,
+                            "sel_order_no": sel_order_no,
+                            "reason": str(exc),
+                        }
+                    )
+                    _update_submit_progress(
+                        inter_id,
+                        completed=index,
+                        failed_count=len(failed),
+                        message=f"Q{sel_order_no} STT 실패",
+                    )
+                    continue
+
+            if not transcript_text:
+                failed.append(
+                    {
+                        "sel_id": sel_id,
+                        "sel_order_no": sel_order_no,
+                        "reason": "Transcript text is empty.",
+                    }
+                )
+                _update_submit_progress(
+                    inter_id,
+                    completed=index,
+                    failed_count=len(failed),
+                    message=f"Q{sel_order_no} 텍스트 없음",
+                )
+                continue
+
+            _update_submit_progress(inter_id, message=f"Q{sel_order_no} 발화 지표 계산 중...")
+            score_payload = calculate_speech_scores(
+                transcript_text=transcript_text,
+                duration_sec=int(row.duration_sec or 0),
+                question_text=row.question_text,
+            )
+            upsert_speech_summary(db=db, sel_id=sel_id, score=score_payload)
+            upsert_speech_detail(db=db, sel_id=sel_id, score=score_payload)
+            processed.append({"sel_id": sel_id, "sel_order_no": sel_order_no})
+
+            _update_submit_progress(
+                inter_id,
+                completed=index,
+                failed_count=len(failed),
+                message=f"Q{sel_order_no} 완료",
+            )
+
+        session = db.query(InterviewSession).filter(InterviewSession.inter_id == inter_id).first()
+        if session and not failed:
+            session.inter_status = "DONE"
+            session.inter_finished_at = func.now()
+            db.commit()
+
+        _update_submit_progress(
+            inter_id,
+            status="done",
+            done=True,
+            ok=len(failed) == 0,
+            processed_count=len(processed),
+            failed_count=len(failed),
+            processed=processed,
+            failed=failed,
+            message="분석이 완료되었습니다." if not failed else "일부 질문 분석에 실패했습니다.",
+            finished_at=int(time.time()),
+        )
+    except Exception as exc:
+        _update_submit_progress(
+            inter_id,
+            status="failed",
+            done=True,
+            ok=False,
+            message=f"분석 작업 실패: {exc}",
+            finished_at=int(time.time()),
+        )
+    finally:
+        db.close()
 
 
 @web_router.get("/")
@@ -561,6 +742,20 @@ async def interview_questions(
     )
 
 
+@web_router.get("/interviews/{session_id}/submit-loading")
+async def interview_submit_loading(
+    request: Request,
+    session_id: int,
+):
+    return templates.TemplateResponse(
+        "interview/submit_loading.html",
+        {
+            "request": request,
+            "session_id": session_id,
+        },
+    )
+
+
 @web_router.get("/interviews/{session_id}/questions/{question_id}")
 async def interview_question_detail(
     request: Request,
@@ -653,9 +848,9 @@ async def result_index(
 
 @web_router.get("/interviews/{session_id}/results/{sel_id}/analysis")
 async def result_analysis(request: Request, session_id: int, sel_id: int):
-    return templates.TemplateResponse(
-        "result/analysis.html",
-        {"request": request, "session_id": session_id, "sel_id": sel_id},
+    return RedirectResponse(
+        url=f"/interviews/{session_id}/results/{sel_id}/stt",
+        status_code=status.HTTP_303_SEE_OTHER,
     )
 
 
@@ -670,17 +865,8 @@ async def result_analysis_stt(
         db.query(
             SelectQuestion.sel_id.label("sel_id"),
             Question.qust_question_text.label("question_text"),
-            AudioRecording.duration_sec.label("duration_sec"),
-            Transcript.transcript_text.label("transcript_text"),
-            SpeechScoreSummary.sss_fluency_score.label("fluency_score"),
-            SpeechScoreSummary.sss_clarity_score.label("clarity_score"),
-            SpeechScoreSummary.sss_structure_score.label("structure_score"),
-            SpeechScoreSummary.sss_length_score.label("length_score"),
         )
         .join(Question, Question.qust_id == SelectQuestion.qust_id)
-        .outerjoin(AudioRecording, AudioRecording.sel_id == SelectQuestion.sel_id)
-        .outerjoin(Transcript, Transcript.sel_id == SelectQuestion.sel_id)
-        .outerjoin(SpeechScoreSummary, SpeechScoreSummary.sel_id == SelectQuestion.sel_id)
         .filter(SelectQuestion.inter_id == session_id, SelectQuestion.sel_id == sel_id)
         .first()
     )
@@ -690,17 +876,15 @@ async def result_analysis_stt(
             detail="Question in session not found.",
         )
 
-    transcript_text = (row.transcript_text or "").strip()
-    duration_sec = int(row.duration_sec or 0)
-    score_payload = None
-
-    if transcript_text:
-        score_payload = calculate_speech_scores(
-            transcript_text=transcript_text,
-            duration_sec=duration_sec,
-            question_text=row.question_text,
-        )
-        upsert_speech_summary(db=db, sel_id=sel_id, score=score_payload)
+    score_payload = get_speech_detail_payload(db=db, sel_id=sel_id)
+    feedback_row = get_speech_feedback(db=db, sel_id=sel_id)
+    feedback_payload = None
+    if feedback_row:
+        feedback_payload = {
+            "report_md": feedback_row.sfb_report_md,
+            "coaching_md": feedback_row.sfb_coaching_md,
+            "model": feedback_row.sfb_model,
+        }
 
     return templates.TemplateResponse(
         "result/analysis_stt.html",
@@ -710,6 +894,7 @@ async def result_analysis_stt(
             "sel_id": sel_id,
             "question_text": row.question_text,
             "score": score_payload,
+            "feedback": feedback_payload,
         },
     )
 
@@ -745,7 +930,15 @@ async def result_transcript(
             detail="Transcript in session not found.",
         )
 
-    effective_text = row.transcript_text or "Transcript is not generated yet."
+    transcript_text = (row.transcript_text or "").strip()
+    if not transcript_text and (row.file_path or "").strip():
+        try:
+            _, transcript = run_stt_and_update(db=db, inter_id=session_id, sel_id=sel_id)
+            transcript_text = (transcript.transcript_text or "").strip()
+        except Exception:
+            transcript_text = ""
+
+    effective_text = transcript_text or "Transcript is not generated yet."
     if row.refine_status == "APPLIED" and (row.refined_text or "").strip():
         effective_text = row.refined_text
     audio_url = f"/storage/{row.file_path}" if (row.file_path or "").strip() else None
@@ -1010,6 +1203,7 @@ async def build_speech_score(
         question_text=row.question_text,
     )
     summary = upsert_speech_summary(db=db, sel_id=sel_id, score=score_payload)
+    upsert_speech_detail(db=db, sel_id=sel_id, score=score_payload)
 
     return {
         "message": "Speech score calculated.",
@@ -1021,6 +1215,274 @@ async def build_speech_score(
         "structure_score": float(summary.sss_structure_score),
         "length_score": float(summary.sss_length_score),
         "metrics": score_payload.metrics,
+    }
+
+
+@web_router.post(
+    "/api/interviews/{inter_id}/submit-analysis",
+    status_code=status.HTTP_200_OK,
+)
+async def submit_interview_analysis(
+    inter_id: int,
+    db: Session = Depends(get_db),
+):
+    rows = (
+        db.query(
+            SelectQuestion.sel_id.label("sel_id"),
+            SelectQuestion.sel_order_no.label("sel_order_no"),
+            Question.qust_question_text.label("question_text"),
+            AudioRecording.file_path.label("file_path"),
+            AudioRecording.duration_sec.label("duration_sec"),
+            Transcript.transcript_text.label("transcript_text"),
+        )
+        .join(Question, Question.qust_id == SelectQuestion.qust_id)
+        .outerjoin(AudioRecording, AudioRecording.sel_id == SelectQuestion.sel_id)
+        .outerjoin(Transcript, Transcript.sel_id == SelectQuestion.sel_id)
+        .filter(SelectQuestion.inter_id == inter_id)
+        .order_by(SelectQuestion.sel_order_no.asc(), SelectQuestion.sel_id.asc())
+        .all()
+    )
+
+    if not rows:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Interview session questions not found.",
+        )
+
+    processed: list[dict[str, int | str]] = []
+    failed: list[dict[str, int | str]] = []
+
+    for row in rows:
+        if not (row.file_path or "").strip():
+            failed.append(
+                {
+                    "sel_id": int(row.sel_id),
+                    "sel_order_no": int(row.sel_order_no),
+                    "reason": "Recording is missing.",
+                }
+            )
+            continue
+
+        transcript_text = (row.transcript_text or "").strip()
+        if not transcript_text:
+            try:
+                _, transcript = run_stt_and_update(db=db, inter_id=inter_id, sel_id=int(row.sel_id))
+                transcript_text = (transcript.transcript_text or "").strip()
+            except Exception as exc:
+                failed.append(
+                    {
+                        "sel_id": int(row.sel_id),
+                        "sel_order_no": int(row.sel_order_no),
+                        "reason": str(exc),
+                    }
+                )
+                continue
+
+        if not transcript_text:
+            failed.append(
+                {
+                    "sel_id": int(row.sel_id),
+                    "sel_order_no": int(row.sel_order_no),
+                    "reason": "Transcript text is empty.",
+                }
+            )
+            continue
+
+        score_payload = calculate_speech_scores(
+            transcript_text=transcript_text,
+            duration_sec=int(row.duration_sec or 0),
+            question_text=row.question_text,
+        )
+        upsert_speech_summary(db=db, sel_id=int(row.sel_id), score=score_payload)
+        upsert_speech_detail(db=db, sel_id=int(row.sel_id), score=score_payload)
+        processed.append(
+            {
+                "sel_id": int(row.sel_id),
+                "sel_order_no": int(row.sel_order_no),
+            }
+        )
+
+    session = db.query(InterviewSession).filter(InterviewSession.inter_id == inter_id).first()
+    if session and not failed:
+        session.inter_status = "DONE"
+        session.inter_finished_at = func.now()
+        db.commit()
+
+    return {
+        "ok": len(failed) == 0,
+        "inter_id": inter_id,
+        "processed_count": len(processed),
+        "failed_count": len(failed),
+        "processed": processed,
+        "failed": failed,
+    }
+
+
+@web_router.post(
+    "/api/interviews/{inter_id}/submit-analysis/start",
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def start_submit_analysis_job(
+    inter_id: int,
+):
+    with SUBMIT_ANALYSIS_LOCK:
+        progress = SUBMIT_ANALYSIS_PROGRESS.get(inter_id)
+        if progress and progress.get("status") == "running":
+            return {
+                "ok": True,
+                "inter_id": inter_id,
+                "status": "running",
+                "message": "Analysis job is already running.",
+            }
+        SUBMIT_ANALYSIS_PROGRESS[inter_id] = {
+            "status": "running",
+            "done": False,
+            "ok": False,
+            "total": 0,
+            "completed": 0,
+            "failed_count": 0,
+            "message": "작업을 준비 중입니다.",
+            "started_at": int(time.time()),
+        }
+
+    worker = threading.Thread(target=_run_submit_analysis_job, args=(inter_id,), daemon=True)
+    worker.start()
+    return {
+        "ok": True,
+        "inter_id": inter_id,
+        "status": "started",
+    }
+
+
+@web_router.get(
+    "/api/interviews/{inter_id}/submit-analysis/progress",
+    status_code=status.HTTP_200_OK,
+)
+async def get_submit_analysis_progress(
+    inter_id: int,
+):
+    with SUBMIT_ANALYSIS_LOCK:
+        progress = dict(SUBMIT_ANALYSIS_PROGRESS.get(inter_id, {}))
+
+    if not progress:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Analysis job not found.",
+        )
+
+    total = int(progress.get("total") or 0)
+    completed = int(progress.get("completed") or 0)
+    percent = int((completed / total) * 100) if total > 0 else 0
+    progress["percent"] = max(0, min(100, percent))
+    progress["inter_id"] = inter_id
+    return progress
+
+
+@web_router.get(
+    "/api/interviews/{inter_id}/questions/{sel_id}/speech-feedback",
+    status_code=status.HTTP_200_OK,
+)
+async def get_speech_feedback_payload(
+    inter_id: int,
+    sel_id: int,
+    db: Session = Depends(get_db),
+):
+    row = (
+        db.query(SelectQuestion.sel_id.label("sel_id"))
+        .filter(SelectQuestion.inter_id == inter_id, SelectQuestion.sel_id == sel_id)
+        .first()
+    )
+    if not row:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Question in session not found.",
+        )
+
+    feedback_row = get_speech_feedback(db=db, sel_id=sel_id)
+    if not feedback_row:
+        return {
+            "exists": False,
+            "inter_id": inter_id,
+            "sel_id": sel_id,
+        }
+    return {
+        "exists": True,
+        "inter_id": inter_id,
+        "sel_id": sel_id,
+        "report_md": feedback_row.sfb_report_md,
+        "coaching_md": feedback_row.sfb_coaching_md,
+        "model": feedback_row.sfb_model,
+    }
+
+
+@web_router.post(
+    "/api/interviews/{inter_id}/questions/{sel_id}/speech-feedback",
+    status_code=status.HTTP_200_OK,
+)
+async def build_speech_feedback(
+    inter_id: int,
+    sel_id: int,
+    force: int = Form(default=0),
+    db: Session = Depends(get_db),
+):
+    row = (
+        db.query(
+            SelectQuestion.sel_id.label("sel_id"),
+            Question.qust_question_text.label("question_text"),
+        )
+        .join(Question, Question.qust_id == SelectQuestion.qust_id)
+        .filter(SelectQuestion.inter_id == inter_id, SelectQuestion.sel_id == sel_id)
+        .first()
+    )
+    if not row:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Question in session not found.",
+        )
+
+    if not force:
+        cached = get_speech_feedback(db=db, sel_id=sel_id)
+        if cached:
+            return {
+                "cached": True,
+                "inter_id": inter_id,
+                "sel_id": sel_id,
+                "report_md": cached.sfb_report_md,
+                "coaching_md": cached.sfb_coaching_md,
+                "model": cached.sfb_model,
+            }
+
+    score_payload = get_speech_detail_payload(db=db, sel_id=sel_id)
+    if not score_payload:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Speech metrics are missing. Run submit analysis first.",
+        )
+
+    try:
+        feedback_result = generate_speech_feedback(
+            question_text=row.question_text or "",
+            score_payload=score_payload,
+        )
+    except RuntimeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Speech feedback generation failed: {exc}",
+        ) from exc
+
+    saved = upsert_speech_feedback(db=db, sel_id=sel_id, result=feedback_result)
+    return {
+        "cached": False,
+        "inter_id": inter_id,
+        "sel_id": sel_id,
+        "report_md": saved.sfb_report_md,
+        "coaching_md": saved.sfb_coaching_md,
+        "model": saved.sfb_model,
     }
 @web_router.post(
     "/api/interviews/{inter_id}/questions/{sel_id}/transcript/refine",
