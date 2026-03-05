@@ -20,6 +20,8 @@ import models.resume
 import models.resume_classification
 import models.resume_keyword
 import models.select_question
+import models.speech_score_detail
+import models.speech_feedback
 import models.speech_score_summary
 import models.transcript
 import models.transcript_refine

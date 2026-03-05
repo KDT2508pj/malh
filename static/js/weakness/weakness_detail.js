@@ -8,12 +8,18 @@ let mediaRecorder = null;
 let mediaStream = null;
 let recordedChunks = [];
 let isRecording = false;
+let isPreparing = false;
+let isPreviewRunning = false;
+let questionPreviewUsedCount = 0;
 let audioContext = null;
 let analyserNode = null;
 let sourceNode = null;
 let animationFrameId = null;
 let frequencyData = null;
 let smoothedLevels = [];
+
+const QUESTION_PREVIEW_SECONDS = 5;
+const QUESTION_PREVIEW_MAX_COUNT = 2;
 
 function getSessionIdFromPath() {
     const match = window.location.pathname.match(/\/interviews\/(\d+)/);
@@ -23,6 +29,74 @@ function getSessionIdFromPath() {
 function getQuestionIdFromPath() {
     const match = window.location.pathname.match(/\/weakness\/(\d+)/);
     return match ? Number(match[1]) : 0;
+}
+
+function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function setStandbyMessage(message) {
+    $("#record-guide").text(message);
+}
+
+function remainingPreviewCount() {
+    return Math.max(0, QUESTION_PREVIEW_MAX_COUNT - questionPreviewUsedCount);
+}
+
+function updatePreviewStatusUI() {
+    const usedText = `질문 미리보기 사용: ${questionPreviewUsedCount}/${QUESTION_PREVIEW_MAX_COUNT} (각 5초)`;
+    $("#standby-placeholder").text(usedText);
+
+    const remain = remainingPreviewCount();
+    const recordingText = remain > 0
+        ? `녹음 중 질문 다시보기 가능: ${remain}회 남음`
+        : "질문 다시보기 사용 횟수를 모두 사용했습니다.";
+    $("#recording-placeholder").text(recordingText);
+
+    const exhausted = remain === 0;
+    $("#review-question-btn").prop("disabled", exhausted);
+    if (exhausted && !$("#recording-preview-countdown").text().trim()) {
+        $("#recording-preview-countdown").text("질문 다시보기 2회를 모두 사용했습니다.");
+    }
+}
+
+async function runQuestionPreview(targetMode) {
+    if (isPreviewRunning || remainingPreviewCount() === 0) {
+        return false;
+    }
+
+    isPreviewRunning = true;
+    const isRecordingMode = targetMode === "recording";
+    const $text = isRecordingMode ? $("#recording-question-text") : $("#standby-question-text");
+    const $placeholder = isRecordingMode ? $("#recording-placeholder") : $("#standby-placeholder");
+    const $countdown = isRecordingMode ? $("#recording-preview-countdown") : $("#preview-countdown");
+
+    $placeholder.hide();
+    $text.removeClass("hidden");
+
+    for (let remain = QUESTION_PREVIEW_SECONDS; remain > 0; remain -= 1) {
+        $countdown.text(`질문 확인 ${remain}초`);
+        await sleep(1000);
+    }
+
+    $text.addClass("hidden");
+    $placeholder.show();
+    questionPreviewUsedCount += 1;
+    updatePreviewStatusUI();
+
+    if (isRecordingMode) {
+        $countdown.text("질문을 다시 숨깁니다.");
+        await sleep(300);
+        if (remainingPreviewCount() > 0) {
+            $countdown.text("");
+        }
+    } else {
+        $countdown.text("녹음을 시작합니다...");
+        await sleep(250);
+    }
+
+    isPreviewRunning = false;
+    return true;
 }
 
 function pickSupportedMimeType() {
@@ -46,13 +120,10 @@ async function uploadRecordedAudio(blob) {
     formData.append("audio_file", file);
     formData.append("duration_sec", String(seconds));
 
-    const response = await fetch(
-        `/api/interviews/${sessionId}/questions/${questionId}/recordings`,
-        {
-            method: "POST",
-            body: formData,
-        },
-    );
+    const response = await fetch(`/api/interviews/${sessionId}/questions/${questionId}/recordings`, {
+        method: "POST",
+        body: formData,
+    });
 
     if (!response.ok) {
         const data = await response.json().catch(() => ({}));
@@ -138,7 +209,6 @@ function startVisualizer(stream) {
             const normalized = avg / 255;
 
             smoothedLevels[i] = smoothedLevels[i] * 0.6 + normalized * 0.4;
-
             const height = minHeight + smoothedLevels[i] * (maxHeight - minHeight);
             bars[i].style.height = `${Math.round(height)}px`;
             bars[i].style.opacity = `${Math.max(0.45, Math.min(1, 0.5 + smoothedLevels[i] * 0.8))}`;
@@ -150,10 +220,11 @@ function startVisualizer(stream) {
     render();
 }
 
-async function startRecordingFlow() {
-    if (isRecording) {
+async function startInterviewFlow() {
+    if (isRecording || isPreparing) {
         return;
     }
+
     const sessionId = getSessionIdFromPath();
     const questionId = getQuestionIdFromPath();
     if (!sessionId || !questionId) {
@@ -165,7 +236,11 @@ async function startRecordingFlow() {
         return;
     }
 
+    isPreparing = true;
+    $("#start-interview-btn").prop("disabled", true);
+
     try {
+        setStandbyMessage("마이크 권한을 확인하는 중입니다.");
         mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
         recordedChunks = [];
 
@@ -180,17 +255,51 @@ async function startRecordingFlow() {
             }
         };
 
+        if (remainingPreviewCount() > 0) {
+            setStandbyMessage("질문을 확인하세요.");
+            await runQuestionPreview("standby");
+        } else {
+            $("#preview-countdown").text("질문 미리보기 2회를 모두 사용했습니다.");
+            await sleep(500);
+        }
+
         startVisualizer(mediaStream);
         mediaRecorder.start();
         isRecording = true;
+
         $("#mode-standby").removeClass("active");
         $("#mode-recording").addClass("active");
+        $("#preview-countdown").text("");
         startTimer();
+        updatePreviewStatusUI();
     } catch (_error) {
         stopVisualizer();
         cleanupStream();
+        mediaRecorder = null;
         alert("Microphone permission is required.");
+        setStandbyMessage("시작 시 질문을 5초 보여준 뒤 녹음이 시작됩니다.");
+        $("#preview-countdown").text("");
+    } finally {
+        isPreparing = false;
+        $("#start-interview-btn").prop("disabled", false);
     }
+}
+
+async function reviewQuestionDuringRecording() {
+    if (!isRecording || isPreviewRunning) {
+        return;
+    }
+
+    if (remainingPreviewCount() === 0) {
+        $("#recording-preview-countdown").text("질문 다시보기 2회를 모두 사용했습니다.");
+        return;
+    }
+
+    await runQuestionPreview("recording");
+}
+
+function startRecordingFlow() {
+    return startInterviewFlow();
 }
 
 function startTimer() {
@@ -236,6 +345,7 @@ function finishRecording() {
             alert(error.message || "Failed to save recording.");
             $("#mode-recording").removeClass("active");
             $("#mode-standby").addClass("active");
+            $("#preview-countdown").text("");
         } finally {
             cleanupStream();
             mediaRecorder = null;
@@ -247,5 +357,6 @@ function finishRecording() {
 }
 
 $(function () {
+    updatePreviewStatusUI();
     console.log("weakness detail loaded");
 });

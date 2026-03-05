@@ -1,6 +1,6 @@
 {% extends "layouts/base.html" %}
 
-{% block title %}약점 보강 - 말해뭐해{% endblock %}
+{% block title %}약점 보강 - 말해봐해{% endblock %}
 
 {% block head %}
 <link rel="stylesheet" href="/static/css/weakness/weakness.css">
@@ -12,8 +12,8 @@
         <div class="page-header">
             <h2 class="page-title">약점 보강</h2>
             <p class="page-desc">
-                AI 분석 결과를 바탕으로 보완이 필요한 질문 목록입니다.<br>
-                각 항목을 눌러 보강 답변을 진행하세요.
+                질문 번호를 선택한 뒤 상세 페이지에서 보강 답변을 진행해 주세요.<br>
+                시작 버튼을 누르면 질문이 5초 표시된 후 녹음이 시작됩니다.
             </p>
         </div>
 
@@ -23,7 +23,7 @@
                 <div class="question-card" onclick="goToWeaknessDetail({{ item.sel_id }})">
                     <div class="card-left">
                         <span class="q-label">Weakness Q{{ item.sel_order_no }}</span>
-                        <div class="q-text">{{ item.question_text }}</div>
+                        <div class="q-text">클릭 후 상세 페이지에서 질문을 확인할 수 있습니다.</div>
                     </div>
                     <div class="card-right">→</div>
                 </div>
