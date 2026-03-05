@@ -11,6 +11,9 @@ from sqlalchemy.orm import Session
 from core.database import get_db
 from models.user import User
 
+# ⚠️ 만약 실제 DB의 이력서 모델이 있다면 아래 주석을 풀고 임포트 해주세요.
+# from models.resume import Resume 
+
 router = APIRouter()
 
 templates = Jinja2Templates(directory="templates")
@@ -129,8 +132,6 @@ class PasswordChangeRequest(BaseModel):
     current_password: str  # 추가된 부분
     new_password: str
 
-# ... (다른 코드들 그대로 유지) ...
-
 # ✅ 2. 비밀번호 변경 API 로직 수정
 @router.post("/auth/change-password")
 def change_password(
@@ -192,3 +193,22 @@ def withdraw_user(
     response = JSONResponse(content={"message": "회원 탈퇴가 완료되었습니다. 그동안 이용해 주셔서 감사합니다."})
     response.delete_cookie(key="login_user", path="/")
     return response
+
+# =====================================================
+# 피드백 페이지 (GET) - ⭐️ 새롭게 추가된 부분
+# =====================================================
+@router.get("/resume/feedback")
+def feedback_page(request: Request, db: Session = Depends(get_db)):
+    # 1. 로그인 체크
+    user_id = request.cookies.get("login_user")
+    if not user_id:
+        return RedirectResponse(url="/auth/login", status_code=status.HTTP_303_SEE_OTHER)
+        
+    # 2. 유저의 이력서 조회 (실제 DB 연동 시 아래 주석 해제 후 맞게 수정하세요)
+    # resumes = db.query(Resume).filter(Resume.user_username == user_id).all()
+    
+    # 지금은 테스트를 위해 일부러 빈 리스트를 넘깁니다.
+    # 이 빈 리스트가 HTML로 넘어가야 HTML 파일의 {% if not resumes %}가 드디어 작동합니다!
+    resumes = [] 
+    
+    return templates.TemplateResponse("feedback.html", {"request": request, "resumes": resumes})

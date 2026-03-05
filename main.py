@@ -54,8 +54,8 @@ def create_app() -> FastAPI:
     # 회원가입/로그인 라우터
     app.include_router(member_router)
 
-    # ✅ 피드백 라우터 등록
-    app.include_router(feedback_router)
+    # ✅ 피드백 라우터 등록 수정
+    app.include_router(feedback_router, tags=["feedback"])  
 
     # ✅ 메인 페이지 경로 추가
     @app.get("/", response_class=HTMLResponse)
@@ -68,6 +68,5 @@ def create_app() -> FastAPI:
         return "ok"
 
     return app
-
 
 app = create_app()
