@@ -33,6 +33,34 @@ class SelectQuestion(Base):
     interview_session = relationship("InterviewSession", back_populates="selected_questions")
     question = relationship("Question", back_populates="selected_questions")
 
-    transcript = relationship("Transcript", back_populates="select_question", uselist=False)
-    answer_analysis = relationship("AnswerAnalysis", back_populates="select_question", uselist=False)
-    speech_summary = relationship("SpeechScoreSummary", back_populates="select_question", uselist=False)
+    transcript = relationship(
+        "Transcript",
+        back_populates="select_question",
+        uselist=False,
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+
+    answer_analysis = relationship(
+        "AnswerAnalysis",
+        back_populates="select_question",
+        uselist=False,
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+
+    speech_score_summary = relationship(
+        "SpeechScoreSummary",
+        back_populates="select_question",
+        uselist=False,
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+
+    speech_score_detail = relationship(
+        "SpeechScoreDetail",
+        back_populates="select_question",
+        uselist=False,
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )

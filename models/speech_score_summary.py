@@ -13,7 +13,12 @@ class SpeechScoreSummary(Base):
         autoincrement=True,
         comment="질문 단위 음성 평가 점수 요약 레코드를 유일하게 식별하는 기본키",
     )
-    sel_id = Column(Integer, ForeignKey("select_question.sel_id"), nullable=False, unique=True)
+    sel_id = Column(
+        Integer,
+        ForeignKey("select_question.sel_id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,
+    )
     
     sss_fluency_score = Column(
         DECIMAL(5, 2),
@@ -36,4 +41,4 @@ class SpeechScoreSummary(Base):
         comment="답변 길이 적절성과 발화 시간 기준을 종합 평가하여 계산된 답변 길이 상위 점수",
     )
 
-    select_question = relationship("SelectQuestion", back_populates="speech_summary")
+    select_question = relationship("SelectQuestion", back_populates="speech_score_summary")
