@@ -36,8 +36,14 @@ class CertificateItem(BaseModel):
 
 
 class ResumeStructuredResult(BaseModel):
-    position: Optional[str] = None
-    career_summary: Optional[str] = None
+    position: Optional[str] = Field(
+        default=None,
+        description="대표 직무명",
+    )
+    career_summary: Optional[str] = Field(
+        default=None,
+        description="경력 수준/기간 요약값만 허용. 예: 신입, 인턴 3개월, 1년 6개월, 총 3년",
+    )
     skills: List[str] = Field(default_factory=list)
 
     educations: List[EducationItem] = Field(default_factory=list)
