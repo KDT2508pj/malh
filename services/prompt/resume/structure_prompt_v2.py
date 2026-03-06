@@ -1,4 +1,4 @@
-PROMPT_VERSION_STRUCTURE = "RESUME_STRUCTURE_V3"
+PROMPT_VERSION_STRUCTURE = "RESUME_STRUCTURE_V2"
 
 STRUCTURE_SYSTEM_PROMPT = """
 당신은 이력서 구조화 분석기입니다.
@@ -6,8 +6,6 @@ STRUCTURE_SYSTEM_PROMPT = """
 문서에 없는 정보는 추측하지 마십시오.
 값이 없으면 단일 값은 null, 목록은 []로 반환하십시오.
 """
-
-
 def build_structure_user_prompt(
     resume_text: str,
     job_family: str | None = None,
@@ -50,26 +48,9 @@ def build_structure_user_prompt(
   없으면 null
 
 - career_summary:
-  지원자의 경력 수준 또는 기간만 추출하십시오.
-  이 필드는 '경력 소개문'이나 '학습 방향 요약'이 아닙니다.
-  반드시 경력 수준/기간 형태만 반환하십시오.
-
-  허용 예시:
-  - 신입
-  - 인턴 3개월
-  - 1년 6개월
-  - 총 3년
-  - 경력 5년
-
-  금지 예시:
-  - 백엔드 개발 역량과 AI 학습
-  - 성장 중인 개발자
-  - 문제 해결 중심 개발자
-  - AI와 백엔드를 함께 공부 중
-  - 백엔드 개발 역량 보유
-
-  자기소개성 문장, 역량 요약, 학습 방향, 포부, 성향 설명은 절대 넣지 마십시오.
-  문서에서 경력 수준/기간이 명확하지 않으면 반드시 null로 반환하십시오.
+  전체 경력 수준을 30자 이내로 간단히 요약
+  예: 신입 / 1년 6개월 / 총 3년 / 마케팅 인턴 6개월
+  명확하지 않으면 null
 
 - skills:
   기술 스택뿐 아니라 직무 관련 도구/방법론/업무 도구도 포함 가능

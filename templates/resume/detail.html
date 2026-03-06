@@ -81,15 +81,18 @@
                 <div class="info-group" style="align-items: flex-start;">
                     <div class="info-label" style="margin-top: 6px;">기술</div>
                     <div class="tech-tags">
-                        {% if structured and structured.structured_skills %}
-                            {% for skill in structured.structured_skills %}
-                                <span class="tag">{{ skill }}</span>
-                            {% endfor %}
-                        {% elif keywords %}
+                        {% set ns = namespace(skill_keywords=[]) %}
+                        {% if keywords %}
                             {% for keyword in keywords %}
-                                {% if keyword.keyword_type in ["SKILL", "TOOL"] %}
-                                    <span class="tag">{{ keyword.keyword_keyword }}</span>
+                                {% if keyword.keyword_type|upper in ["SKILL", "TOOL"] %}
+                                    {% set ns.skill_keywords = ns.skill_keywords + [keyword.keyword_keyword] %}
                                 {% endif %}
+                            {% endfor %}
+                        {% endif %}
+
+                        {% if ns.skill_keywords %}
+                            {% for skill in ns.skill_keywords %}
+                                <span class="tag">{{ skill }}</span>
                             {% endfor %}
                         {% else %}
                             <span class="tag tag-empty">기술 정보 없음</span>
