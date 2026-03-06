@@ -888,7 +888,7 @@ async def interview_question_detail(
     if not row:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Question in session not found.",
+            detail="세션에서 해당 질문을 찾을 수 없습니다.",
         )
 
     return templates.TemplateResponse(
@@ -982,7 +982,7 @@ async def result_analysis_stt(
     if not row:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Question in session not found.",
+            detail="세션에서 해당 질문을 찾을 수 없습니다.",
         )
 
     score_payload = get_speech_detail_payload(db=db, sel_id=sel_id)
@@ -1134,7 +1134,7 @@ async def weakness_detail(
     if not row:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Weakness question in session not found.",
+            detail="세션에서 해당 약점 질문을 찾을 수 없습니다.",
         )
 
     return templates.TemplateResponse(
@@ -1177,7 +1177,7 @@ async def upload_recording(
     if not audio_file.content_type or not audio_file.content_type.startswith("audio/"):
         raise HTTPException(
             status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-            detail="Only audio files are allowed.",
+            detail="오디오 파일만 업로드할 수 있습니다.",
         )
 
     select_question = (
@@ -1188,7 +1188,7 @@ async def upload_recording(
     if not select_question:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Question in session not found.",
+            detail="세션에서 해당 질문을 찾을 수 없습니다.",
         )
 
     ext = resolve_recording_extension(audio_file.filename, audio_file.content_type)
@@ -1198,7 +1198,7 @@ async def upload_recording(
     if not payload:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Uploaded audio file is empty.",
+            detail="업로드한 오디오 파일이 비어 있습니다.",
         )
 
     saved = save_recording_and_upsert(
@@ -1242,7 +1242,7 @@ async def run_stt(
     if not select_question:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Question in session not found.",
+            detail="세션에서 해당 질문을 찾을 수 없습니다.",
         )
 
     try:
@@ -1259,7 +1259,7 @@ async def run_stt(
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"STT processing failed: {exc}",
+            detail=f"STT 처리에 실패했습니다: {exc}",
         ) from exc
 
     return {
@@ -1298,12 +1298,12 @@ async def build_speech_score(
     if not row:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Question in session not found.",
+            detail="세션에서 해당 질문을 찾을 수 없습니다.",
         )
     if not (row.transcript_text or "").strip():
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Transcript is missing. Run STT first.",
+            detail="전사 텍스트가 없습니다. 먼저 STT를 실행해 주세요.",
         )
 
     score_payload = calculate_speech_scores(
@@ -1528,7 +1528,7 @@ async def get_speech_feedback_payload(
     if not row:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Question in session not found.",
+            detail="세션에서 해당 질문을 찾을 수 없습니다.",
         )
 
     feedback_row = get_speech_feedback(db=db, sel_id=sel_id)
@@ -1570,7 +1570,7 @@ async def build_speech_feedback(
     if not row:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Question in session not found.",
+            detail="세션에서 해당 질문을 찾을 수 없습니다.",
         )
 
     if not force:
@@ -1589,7 +1589,7 @@ async def build_speech_feedback(
     if not score_payload:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Speech metrics are missing. Run submit analysis first.",
+            detail="발화 지표가 없습니다. 먼저 제출 분석을 실행해 주세요.",
         )
 
     try:
@@ -1605,7 +1605,7 @@ async def build_speech_feedback(
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Speech feedback generation failed: {exc}",
+            detail=f"발화 피드백 생성에 실패했습니다: {exc}",
         ) from exc
 
     saved = upsert_speech_feedback(db=db, sel_id=sel_id, result=feedback_result)
@@ -1638,12 +1638,12 @@ async def refine_transcript(
     if not row:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Question in session not found.",
+            detail="세션에서 해당 질문을 찾을 수 없습니다.",
         )
     if not (row.transcript_text or "").strip():
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Transcript is missing. Run STT first.",
+            detail="전사 텍스트가 없습니다. 먼저 STT를 실행해 주세요.",
         )
 
     try:
@@ -1656,7 +1656,7 @@ async def refine_transcript(
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Transcript refine failed: {exc}",
+            detail=f"전사 텍스트 보정에 실패했습니다: {exc}",
         ) from exc
 
     saved = upsert_refine_result(db=db, sel_id=sel_id, result=result)
@@ -1702,7 +1702,7 @@ async def get_transcript_payload(
     if not row:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Question in session not found.",
+            detail="세션에서 해당 질문을 찾을 수 없습니다.",
         )
 
     raw_text = row.raw_text or ""

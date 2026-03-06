@@ -134,7 +134,7 @@ async function uploadRecordedAudio(blob) {
 
     if (!response.ok) {
         const data = await response.json().catch(() => ({}));
-        const message = data.detail || "Recording upload failed.";
+        const message = data.detail || "녹음 파일 업로드에 실패했습니다.";
         throw new Error(message);
     }
 
@@ -232,11 +232,11 @@ async function startInterviewFlow() {
         return;
     }
     if (!sessionId || !selId) {
-        alert("Interview context is invalid.");
+        alert("면접 정보가 올바르지 않습니다.");
         return;
     }
     if (!window.MediaRecorder) {
-        alert("This browser does not support audio recording.");
+        alert("이 브라우저에서는 음성 녹음을 지원하지 않습니다.");
         return;
     }
 
@@ -280,7 +280,7 @@ async function startInterviewFlow() {
         stopVisualizer();
         cleanupStream();
         mediaRecorder = null;
-        alert("Microphone permission is required.");
+        alert("마이크 권한이 필요합니다.");
         setStandbyMessage("시작 시 질문을 5초 보여준 뒤 녹음이 시작됩니다.");
         $("#preview-countdown").text("");
     } finally {
@@ -320,10 +320,10 @@ function finishRecording() {
             const type = mediaRecorder.mimeType || "audio/webm";
             const blob = new Blob(recordedChunks, { type });
             await uploadRecordedAudio(blob);
-            alert("Recording saved.");
+            alert("녹음이 저장되었습니다.");
             window.location.href = `/interviews/${sessionId}`;
         } catch (error) {
-            alert(error.message || "Failed to save recording.");
+            alert(error.message || "녹음 저장에 실패했습니다.");
             $("#mode-recording").removeClass("active");
             $("#mode-standby").addClass("active");
             $("#preview-countdown").text("");
