@@ -21,7 +21,6 @@
             <div class="dashboard-header">
                 <div class="header-left">
                     <h2>이력서 관리</h2>
-                    <!-- 실제 개수 반영 -->
                     <p id="total-count-txt">{{ resumes|length }}개의 이력서가 등록되어 있습니다.</p>
                 </div>
                 <button class="add-btn" id="go-upload-btn">
@@ -29,116 +28,131 @@
                 </button>
             </div>
 
-            <!-- JS에서 사용할 숨김 값 -->
             <input type="hidden" id="modelInput" value="{{ default_model }}">
 
-            <div class="card-list-wrapper" id="resume-list">
-                <!-- DB 데이터 반복 렌더링 -->
-                {% if resumes %}
-                    {% for resume in resumes %}
-                    <div class="resume-card">
-                        <div class="card-header">
-                            <div class="file-icon">📄</div>
+            <div class="resume-slider-section">
+                <button type="button" class="slider-btn slider-btn-prev" id="resumePrevBtn" aria-label="이전">
+                    &#10094;
+                </button>
 
-                            <div class="file-info">
-                                <div class="file-name">{{ resume.resume_file_name }}</div>
-                                <div class="file-meta">
-                                    {{ resume.resume_file_type }}
-                                    {% if resume.resume_file_size %}
-                                        • {{ ((resume.resume_file_size | int) / 1024 / 1024) | round(2) }}MB
+                <div class="resume-slider-viewport" id="resumeViewport">
+                    <div class="card-list-wrapper" id="resume-list">
+                        {% if resumes %}
+                            {% for resume in resumes %}
+                            <div class="resume-card">
+                                <div class="card-header">
+                                    <div class="file-icon">📄</div>
+
+                                    <div class="file-info">
+                                        <div class="file-name">{{ resume.resume_file_name }}</div>
+                                        <div class="file-meta">
+                                            {{ resume.resume_file_type }}
+                                            {% if resume.resume_file_size %}
+                                                {% set size = resume.resume_file_size | int %}
+                                                •
+                                                {% if size < 1024 * 1024 %}
+                                                    {{ (size / 1024) | round(1) }}KB
+                                                {% else %}
+                                                    {{ (size / 1024 / 1024) | round(1) }}MB
+                                                {% endif %}
+                                            {% endif %}
+                                        </div>
+                                    </div>
+
+                                    <form
+                                        action="/resumes/{{ resume.resume_id }}/delete"
+                                        method="post"
+                                        class="card-delete-form"
+                                        onsubmit="return confirm('이 이력서와 분석 결과를 삭제하시겠습니까?');"
+                                    >
+                                        <button type="submit" class="delete-btn">🗑️</button>
+                                    </form>
+                                </div>
+
+                                <div class="divider"></div>
+
+                                <div class="info-row">
+                                    <span class="info-label">분석 상태</span>
+                                    <span class="info-value" style="color:var(--primary-orange)">
+                                        {% if resume.resume_status == "DONE" %}
+                                            분석 완료
+                                        {% elif resume.resume_status == "FAILED" %}
+                                            분석 실패
+                                        {% elif resume.resume_status in ["CLASSIFYING", "STRUCTURING", "KEYWORDS_EXTRACTING", "QUESTION_GENERATING"] %}
+                                            분석 중
+                                        {% elif resume.resume_status == "KEYWORDS_DONE" %}
+                                            질문 생성 대기
+                                        {% else %}
+                                            분석 대기중
+                                        {% endif %}
+                                    </span>
+                                </div>
+
+                                <div class="info-row">
+                                    <span class="info-label">직무</span>
+                                    <span class="info-value">
+                                        {% if resume.classification and resume.classification.class_job_role %}
+                                            {{ resume.classification.class_job_role }}
+                                        {% elif resume.classification and resume.classification.class_job_family %}
+                                            {{ resume.classification.class_job_family }}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </span>
+                                </div>
+
+                                <div class="tech-tags">
+                                    {% if resume.keywords %}
+                                        {% for keyword in resume.keywords[:3] %}
+                                            <span class="tag">{{ keyword.keyword_keyword }}</span>
+                                        {% endfor %}
+                                        {% if resume.keywords|length > 3 %}
+                                            <span class="tag tag-more">+{{ resume.keywords|length - 3 }}</span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="tag tag-more">분석 필요</span>
                                     {% endif %}
                                 </div>
+
+                                <div class="stats-area">
+                                    <div class="stats-row">
+                                        <span>연습 횟수</span>
+                                        <span class="stats-val">0회</span>
+                                    </div>
+                                    <div class="stats-row">
+                                        <span>마지막 사용</span>
+                                        <span>
+                                            {% if resume.resume_created_at %}
+                                                {{ resume.resume_created_at.strftime('%Y-%m-%d') }}
+                                            {% else %}
+                                                -
+                                            {% endif %}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <button class="detail-btn" onclick="location.href='/resumes/{{ resume.resume_id }}'">
+                                    상세 보기 &gt;
+                                </button>
                             </div>
-
-                            <form
-                                action="/resumes/{{ resume.resume_id }}/delete"
-                                method="post"
-                                class="card-delete-form"
-                                onsubmit="return confirm('이 이력서와 분석 결과를 삭제하시겠습니까?');"
-                            >
-                                <button type="submit" class="delete-btn">🗑️</button>
-                            </form>
-                        </div>
-
-                        <div class="divider"></div>
-
-                        <div class="info-row">
-                            <span class="info-label">분석 상태</span>
-                            <span class="info-value" style="color:var(--primary-orange)">
-                                {% if resume.resume_status == "DONE" %}
-                                    분석 완료
-                                {% elif resume.resume_status == "FAILED" %}
-                                    분석 실패
-                                {% elif resume.resume_status in ["CLASSIFYING", "STRUCTURING", "KEYWORDS_EXTRACTING", "QUESTION_GENERATING"] %}
-                                    분석 중
-                                {% elif resume.resume_status == "KEYWORDS_DONE" %}
-                                    질문 생성 대기
-                                {% else %}
-                                    분석 대기중
-                                {% endif %}
-                            </span>
-                        </div>
-
-                        <div class="info-row">
-                            <span class="info-label">직무</span>
-                            <span class="info-value">
-                                {% if resume.classification and resume.classification.class_job_role %}
-                                    {{ resume.classification.class_job_role }}
-                                {% elif resume.classification and resume.classification.class_job_family %}
-                                    {{ resume.classification.class_job_family }}
-                                {% else %}
-                                    -
-                                {% endif %}
-                            </span>
-                        </div>
-
-                        <div class="tech-tags">
-                            {% if resume.keywords %}
-                                {% for keyword in resume.keywords[:3] %}
-                                    <span class="tag">{{ keyword.keyword_keyword }}</span>
-                                {% endfor %}
-                                {% if resume.keywords|length > 3 %}
-                                    <span class="tag tag-more">+{{ resume.keywords|length - 3 }}</span>
-                                {% endif %}
-                            {% else %}
-                                <span class="tag tag-more">분석 필요</span>
-                            {% endif %}
-                        </div>
-
-                        <div class="stats-area">
-                            <div class="stats-row">
-                                <span>연습 횟수</span>
-                                <span class="stats-val">0회</span>
+                            {% endfor %}
+                        {% else %}
+                            <div class="resume-card">
+                                <div class="card-header">
+                                    <div class="file-icon">📄</div>
+                                    <div class="file-info">
+                                        <div class="file-name">등록된 이력서가 없습니다.</div>
+                                        <div class="file-meta">새 이력서를 등록해 주세요.</div>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="stats-row">
-                                <span>마지막 사용</span>
-                                <span>
-                                    {% if resume.resume_created_at %}
-                                        {{ resume.resume_created_at.strftime('%Y-%m-%d') }}
-                                    {% else %}
-                                        -
-                                    {% endif %}
-                                </span>
-                            </div>
-                        </div>
-
-                        <!-- 분석 완료된 경우 상세 보기 -->
-                        <button class="detail-btn" onclick="location.href='/resumes/{{ resume.resume_id }}'">
-                            상세 보기 &gt;
-                        </button>
+                        {% endif %}
                     </div>
-                    {% endfor %}
-                {% else %}
-                    <div class="resume-card">
-                        <div class="card-header">
-                            <div class="file-icon">📄</div>
-                            <div class="file-info">
-                                <div class="file-name">등록된 이력서가 없습니다.</div>
-                                <div class="file-meta">새 이력서를 등록해 주세요.</div>
-                            </div>
-                        </div>
-                    </div>
-                {% endif %}
+                </div>
+
+                <button type="button" class="slider-btn slider-btn-next" id="resumeNextBtn" aria-label="다음">
+                    &#10095;
+                </button>
             </div>
         </div>
 
@@ -155,7 +169,6 @@
                     <p class="upload-sub">PDF, DOCX (최대 10MB)</p>
                 </div>
 
-                <!-- JS와 연결되는 input -->
                 <input type="file" id="fileInput" hidden accept=".pdf,.docx">
             </div>
         </div>

@@ -1,5 +1,5 @@
 /**
- * resume.js - 이력서 관리 화면 전환 및 업로드 로직 (jQuery)
+ * resume.js - 이력서 관리 화면 전환, 업로드, 카드 슬라이더 로직
  */
 
 $(function () {
@@ -9,8 +9,14 @@ $(function () {
     const $dropZone = $('#dropZone');
     const $fileInput = $('#fileInput');
 
+    const $resumeList = $('#resume-list');
+    const $prevBtn = $('#resumePrevBtn');
+    const $nextBtn = $('#resumeNextBtn');
+
     // 서버로 보낼 값
     const model = $('#modelInput').val() || 'gpt-4o-mini';
+
+    let currentIndex = 0;
 
     // 2. 화면 전환 이벤트
 
@@ -24,7 +30,9 @@ $(function () {
     // [뒤로가기 버튼 클릭] -> 업로드 숨김, 리스트 표시
     $('#back-to-list-btn').on('click', function () {
         $uploadView.fadeOut(200, function () {
-            $dashboardView.fadeIn(200);
+            $dashboardView.fadeIn(200, function () {
+                updateSlider();
+            });
         });
     });
 
@@ -32,6 +40,7 @@ $(function () {
 
     // 클릭 시 파일 탐색기 열기
     $dropZone.on('click', function () {
+        $fileInput.val('');
         $fileInput[0].click();
     });
 
@@ -70,16 +79,17 @@ $(function () {
     });
 
     // 실제 업로드 처리
-    function handleFileUpload(file) {
+    async function handleFileUpload(file) {
         const formData = new FormData();
         formData.append('model', model);
         formData.append('file', file);
 
-        fetch('/resumes', {
-            method: 'POST',
-            body: formData
-        })
-        .then(async (response) => {
+        try {
+            const response = await fetch('/resumes', {
+                method: 'POST',
+                body: formData
+            });
+
             const result = await response.json();
 
             if (!response.ok) {
@@ -87,12 +97,95 @@ $(function () {
                 return;
             }
 
-            // 업로드 성공 -> wait 페이지 이동
             location.href = `/resumes/${result.resume_id}/wait?model=${encodeURIComponent(result.model)}`;
-        })
-        .catch((error) => {
+        } catch (error) {
             console.error(error);
             alert('업로드 중 오류가 발생했습니다.');
-        });
+        } finally {
+            $fileInput.val('');
+        }
     }
+
+    // 4. 슬라이더 로직
+
+    function getCards() {
+        return $resumeList.find('.resume-card');
+    }
+
+    function getCardsPerView() {
+        if (window.innerWidth <= 768) return 1;
+        if (window.innerWidth <= 1024) return 2;
+        return 3;
+    }
+
+    function getGap() {
+        const gapValue = window.getComputedStyle($resumeList[0]).gap;
+        return parseInt(gapValue, 10) || 0;
+    }
+
+    function updateSlider() {
+        if (!$resumeList.length || !$prevBtn.length || !$nextBtn.length) return;
+
+        const $cards = getCards();
+        const totalCards = $cards.length;
+        const cardsPerView = getCardsPerView();
+
+        if (totalCards === 0) {
+            $resumeList.css('transform', 'translateX(0)');
+            $prevBtn.hide();
+            $nextBtn.hide();
+            return;
+        }
+
+        if (totalCards <= cardsPerView) {
+            currentIndex = 0;
+            $resumeList.css('transform', 'translateX(0)');
+            $prevBtn.prop('disabled', true).hide();
+            $nextBtn.prop('disabled', true).hide();
+            return;
+        }
+
+        $prevBtn.show();
+        $nextBtn.show();
+
+        const $firstCard = $cards.first();
+        const cardWidth = $firstCard.outerWidth();
+        const gap = getGap();
+        const moveUnit = cardWidth + gap;
+        const maxIndex = totalCards - cardsPerView;
+
+        if (currentIndex < 0) currentIndex = 0;
+        if (currentIndex > maxIndex) currentIndex = maxIndex;
+
+        const moveX = currentIndex * moveUnit;
+        $resumeList.css('transform', `translateX(-${moveX}px)`);
+
+        $prevBtn.prop('disabled', currentIndex === 0);
+        $nextBtn.prop('disabled', currentIndex === maxIndex);
+    }
+
+    $prevBtn.on('click', function () {
+        currentIndex -= 1;
+        updateSlider();
+    });
+
+    $nextBtn.on('click', function () {
+        currentIndex += 1;
+        updateSlider();
+    });
+
+    let resizeTimer = null;
+    $(window).on('resize', function () {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(function () {
+            currentIndex = 0;
+            updateSlider();
+        }, 100);
+    });
+
+    $(window).on('load', function () {
+        updateSlider();
+    });
+
+    updateSlider();
 });
