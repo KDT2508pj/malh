@@ -48,7 +48,7 @@ $(function () {
         );
         if (!response.ok) {
             const data = await response.json().catch(() => ({}));
-            throw new Error(data.detail || "STT request failed.");
+            throw new Error(data.detail || "STT 요청에 실패했습니다.");
         }
         return response.json();
     }
@@ -82,7 +82,7 @@ $(function () {
             }
             redirectToResults();
         } catch (error) {
-            alert(error.message || "STT processing failed.");
+            alert(error.message || "STT 처리에 실패했습니다.");
         }
     }
 

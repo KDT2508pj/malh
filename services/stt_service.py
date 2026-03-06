@@ -138,7 +138,7 @@ def run_stt_and_update(
         .first()
     )
     if recording is None:
-        raise ValueError("Recording not found for the selected question.")
+        raise ValueError("선택한 질문의 녹음 파일을 찾을 수 없습니다.")
 
     audio_abs_path = Path(settings.STORAGE_DIR) / recording.file_path
 
