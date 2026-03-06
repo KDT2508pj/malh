@@ -87,6 +87,61 @@ EMAIL_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
 PHONE_RE = re.compile(r"(01[016789])[-\s]?\d{3,4}[-\s]?\d{4}")
 DATE_RE = re.compile(r"(19|20)\d{2}[./-]\d{1,2}")
 
+# career_summary 값 정규화/검증
+def normalize_career_summary(value: Optional[str]) -> Optional[str]:
+    if not value:
+        return None
+
+    text = re.sub(r"\s+", " ", value).strip()
+    if not text:
+        return None
+
+    # 너무 긴 문장은 경력 수준값이 아닐 확률이 높음
+    if len(text) > 30:
+        return None
+
+    allowed_exact = {
+        "신입",
+        "경력",
+        "미분류",
+    }
+
+    if text in allowed_exact:
+        return text
+
+    valid_patterns = [
+        r"인턴\s*\d+\s*(개월|달|년)",
+        r"\d+\s*개월",
+        r"\d+\s*년(\s*\d+\s*개월)?",
+        r"총\s*\d+\s*년(\s*\d+\s*개월)?",
+        r"경력\s*\d+\s*년(\s*\d+\s*개월)?",
+    ]
+
+    if any(re.fullmatch(pattern, text) for pattern in valid_patterns):
+        return text
+
+    if "신입" in text:
+        return "신입"
+
+    # 경력 소개문/자기소개성 문장 차단
+    invalid_keywords = [
+        "역량",
+        "학습",
+        "공부",
+        "성장",
+        "개발자",
+        "문제 해결",
+        "관심",
+        "지향",
+        "포부",
+        "목표",
+    ]
+
+    if any(keyword in text for keyword in invalid_keywords):
+        return None
+
+    return None
+
 def is_probable_resume(text: str):
     t = (text or "").strip()
     reasons = []

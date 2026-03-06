@@ -102,12 +102,21 @@
                                 </div>
 
                                 <div class="tech-tags">
+                                    {% set ns = namespace(skill_keywords=[]) %}
                                     {% if resume.keywords %}
-                                        {% for keyword in resume.keywords[:3] %}
+                                        {% for keyword in resume.keywords %}
+                                            {% if keyword.keyword_type|upper in ["SKILL", "TOOL"] %}
+                                                {% set ns.skill_keywords = ns.skill_keywords + [keyword] %}
+                                            {% endif %}
+                                        {% endfor %}
+                                    {% endif %}
+
+                                    {% if ns.skill_keywords %}
+                                        {% for keyword in ns.skill_keywords[:3] %}
                                             <span class="tag">{{ keyword.keyword_keyword }}</span>
                                         {% endfor %}
-                                        {% if resume.keywords|length > 3 %}
-                                            <span class="tag tag-more">+{{ resume.keywords|length - 3 }}</span>
+                                        {% if ns.skill_keywords|length > 3 %}
+                                            <span class="tag tag-more">+{{ ns.skill_keywords|length - 3 }}</span>
                                         {% endif %}
                                     {% else %}
                                         <span class="tag tag-more">분석 필요</span>

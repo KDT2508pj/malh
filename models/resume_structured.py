@@ -19,7 +19,7 @@ class ResumeStructured(Base):
     llm_id = Column(Integer, ForeignKey("llm_run.llm_id"), nullable=False)
 
     structured_position = Column(String(255), nullable=True, comment="백엔드 개발자, AI 개발자 등")
-    structured_career_summary = Column(String(255), nullable=True, comment="신입, 3년, 1년 6개월 등")
+    structured_career_summary = Column(String(255), nullable=True, comment="경력 수준/기간 요약값. 예: 신입, 인턴 3개월, 1년 6개월, 총 3년")
 
     structured_skills = Column(JSON, nullable=True, comment="기술 목록")
     structured_educations = Column(JSON, nullable=True, comment="학력 목록")
