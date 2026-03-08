@@ -24,7 +24,6 @@ from models.interview_session import InterviewSession
 from models.question import Question
 from models.resume import Resume
 from models.select_question import SelectQuestion
-from models.contact_inquiry import ContactInquiry
 from models.transcript import Transcript
 from models.transcript_refine import TranscriptRefine
 from fastapi.responses import RedirectResponse
@@ -446,52 +445,8 @@ async def how_to_use(request: Request):
 
 
 @web_router.get("/contact")
-async def contact(
-    request: Request,
-    submitted: int = 0,
-):
-    return templates.TemplateResponse(
-        "contact.html",
-        {
-            "request": request,
-            "submitted": submitted == 1,
-        },
-    )
-
-
-@web_router.post("/contact/inquiry")
-async def submit_contact_inquiry(
-    request: Request,
-    name: str = Form(...),
-    email: str = Form(...),
-    category: str = Form(default="GENERAL"),
-    message: str = Form(...),
-    db: Session = Depends(get_db),
-):
-    name_clean = (name or "").strip()
-    email_clean = (email or "").strip()
-    message_clean = (message or "").strip()
-    category_clean = (category or "GENERAL").strip().upper()
-
-    if not name_clean or not email_clean or not message_clean:
-        raise HTTPException(status_code=400, detail="모든 문의 항목을 입력해 주세요.")
-    if len(name_clean) > 100 or len(email_clean) > 255 or len(message_clean) > 4000:
-        raise HTTPException(status_code=400, detail="입력 가능한 길이를 초과했습니다.")
-
-    allowed_categories = {"GENERAL", "BUG", "PARTNERSHIP", "ACCOUNT"}
-    if category_clean not in allowed_categories:
-        category_clean = "GENERAL"
-
-    row = ContactInquiry(
-        ci_name=name_clean,
-        ci_email=email_clean,
-        ci_category=category_clean,
-        ci_message=message_clean,
-    )
-    db.add(row)
-    db.commit()
-
-    return RedirectResponse(url="/contact?submitted=1", status_code=status.HTTP_303_SEE_OTHER)
+async def contact(request: Request):
+    return templates.TemplateResponse("contact.html", {"request": request})
 
 
 # Auth

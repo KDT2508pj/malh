@@ -41,23 +41,21 @@
 <section class="contact-section alt">
     <div class="contact-shell form-shell">
         <h2 class="section-title">문의 남기기</h2>
-        {% if submitted %}
-        <div class="form-alert success">문의가 접수되었습니다. 영업일 기준 1~2일 내에 답변드리겠습니다.</div>
-        {% endif %}
-        <form class="contact-form" action="/contact/inquiry" method="post">
+        <div class="form-alert success">문의 접수 기능은 준비 중입니다. 아래 연락처로 문의해 주세요.</div>
+        <form class="contact-form" onsubmit="return false;">
             <div class="field-row">
                 <div class="field">
                     <label for="name">이름</label>
-                    <input id="name" name="name" type="text" maxlength="100" required>
+                    <input id="name" name="name" type="text" maxlength="100" disabled>
                 </div>
                 <div class="field">
                     <label for="email">이메일</label>
-                    <input id="email" name="email" type="email" maxlength="255" required>
+                    <input id="email" name="email" type="email" maxlength="255" disabled>
                 </div>
             </div>
             <div class="field">
                 <label for="category">문의 유형</label>
-                <select id="category" name="category">
+                <select id="category" name="category" disabled>
                     <option value="GENERAL">일반 문의</option>
                     <option value="BUG">오류/버그 제보</option>
                     <option value="ACCOUNT">계정/권한 문의</option>
@@ -66,9 +64,9 @@
             </div>
             <div class="field">
                 <label for="message">문의 내용</label>
-                <textarea id="message" name="message" rows="7" maxlength="4000" required></textarea>
+                <textarea id="message" name="message" rows="7" maxlength="4000" disabled></textarea>
             </div>
-            <button type="submit" class="submit-btn">문의 접수하기</button>
+            <button type="button" class="submit-btn" disabled>문의 접수하기 (준비 중)</button>
         </form>
     </div>
 </section>

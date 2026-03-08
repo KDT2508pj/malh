@@ -11,7 +11,6 @@ from core.database import engine
 from models.base import Base
 import models.answer_analysis
 import models.audio_recording
-import models.contact_inquiry
 import models.interview_session
 import models.llm_run
 import models.question
