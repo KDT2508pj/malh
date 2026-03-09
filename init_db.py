@@ -21,10 +21,10 @@ from models.speech_feedback import SpeechFeedback
 
 def main():
     Base.metadata.drop_all(bind=engine)
-    print("Dropped existing tables.")
+    print("🗑️ 기존 테이블 삭제 완료")
 
     Base.metadata.create_all(bind=engine)
-    print("Recreated tables.")
+    print("✅ 테이블 재생성 완료")
 
 
 if __name__ == "__main__":
