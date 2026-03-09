@@ -18,21 +18,34 @@
             <li><a href="/" class="{% if request.url.path == '/' %}active{% endif %}">메인</a></li>
             <li><a href="/service-intro" class="{% if request.url.path == '/service-intro' %}active{% endif %}">서비스 소개</a></li>
             <li><a href="/how-to-use" class="{% if request.url.path == '/how-to-use' %}active{% endif %}">이용 방법</a></li>
-            <li><a href="/contact" class="{% if request.url.path == '/contact' %}active{% endif %}">문의하기</a></li>
         </ul>
     </nav>
     <div class="auth-links">
         {% block auth_links %}
             {% if request.cookies.get("login_user") %}
-                <span style="margin-right: 15px; font-weight: bold; color: #333;">
+                <span class="user-greeting">
                     {{ request.cookies.get("login_user") }}님 환영합니다
                 </span>
-                <a href="/auth/logout" style="color: #666; text-decoration: none;">로그아웃</a>
+                <a href="/auth/logout" class="logout-link">로그아웃</a>
             {% else %}
                 <a href="/auth/login">로그인</a>
                 <a href="/auth/agree" class="btn-signup">회원가입</a>
             {% endif %}
         {% endblock %}
+    </div>
+    <button type="button" class="menu-toggle" id="menuToggle" aria-label="메뉴 열기" aria-expanded="false" aria-controls="mobileMenu">
+        <span></span>
+        <span></span>
+        <span></span>
+    </button>
+    <div class="mobile-menu" id="mobileMenu">
+        <nav class="mobile-nav">
+            <ul>
+                <li><a href="/" class="{% if request.url.path == '/' %}active{% endif %}">메인</a></li>
+                <li><a href="/service-intro" class="{% if request.url.path == '/service-intro' %}active{% endif %}">서비스 소개</a></li>
+                <li><a href="/how-to-use" class="{% if request.url.path == '/how-to-use' %}active{% endif %}">이용 방법</a></li>
+            </ul>
+        </nav>
     </div>
   </header>
 
