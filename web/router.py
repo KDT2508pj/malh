@@ -77,6 +77,8 @@ from services.storage_cleanup_service import (
     prune_empty_dirs_upward,
 )
 
+from services.analysis_service import analyze_answer_by_sel_id
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
@@ -299,6 +301,143 @@ def _build_effective_transcript_for_evaluation(
         )
     return raw
 
+def _score_tone(score: int) -> str:
+    if score < 60:
+        return "low"
+    if score < 80:
+        return "mid"
+    return "high"
+
+
+def _load_analysis_bundle(db: Session, session_id: int, sel_id: int):
+    return (
+        db.query(
+            SelectQuestion,
+            Question,
+            InterviewSession,
+            Resume,
+            Transcript,
+            TranscriptRefine,
+            AnswerAnalysis,
+        )
+        .join(Question, Question.qust_id == SelectQuestion.qust_id)
+        .join(InterviewSession, InterviewSession.inter_id == SelectQuestion.inter_id)
+        .join(Resume, Resume.resume_id == InterviewSession.resume_id)
+        .outerjoin(Transcript, Transcript.sel_id == SelectQuestion.sel_id)
+        .outerjoin(TranscriptRefine, TranscriptRefine.transcript_id == Transcript.transcript_id)
+        .outerjoin(AnswerAnalysis, AnswerAnalysis.sel_id == SelectQuestion.sel_id)
+        .filter(
+            SelectQuestion.inter_id == session_id,
+            SelectQuestion.sel_id == sel_id,
+        )
+        .first()
+    )
+
+
+def _render_analysis_text_page(
+    request: Request,
+    db: Session,
+    session_id: int,
+    sel_id: int,
+):
+    bundle = _load_analysis_bundle(db=db, session_id=session_id, sel_id=sel_id)
+
+    if not bundle:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="분석 결과를 찾을 수 없습니다.",
+        )
+
+    select_question, question, interview_session, resume, transcript, refine, analysis = bundle
+
+    refined_text = ""
+    if refine and (refine.r_refined_text or "").strip():
+        refined_text = refine.r_refined_text.strip()
+
+    raw_text = ""
+    if transcript and (transcript.transcript_text or "").strip():
+        raw_text = transcript.transcript_text.strip()
+
+    effective_text = refined_text or raw_text or "분석할 답변 텍스트가 없습니다."
+
+    # 분석이 없으면 페이지 진입 시 1회 자동 생성 시도
+    if analysis is None and effective_text != "분석할 답변 텍스트가 없습니다.":
+        try:
+            analyze_answer_by_sel_id(db=db, sel_id=sel_id, model="gpt-4o-mini")
+            bundle = _load_analysis_bundle(db=db, session_id=session_id, sel_id=sel_id)
+            if bundle:
+                select_question, question, interview_session, resume, transcript, refine, analysis = bundle
+        except Exception as exc:
+            logger.warning(
+                "ANSWER_ANALYSIS_ON_DEMAND_FAILED session_id=%s sel_id=%s error=%s",
+                session_id,
+                sel_id,
+                exc,
+            )
+
+    relevance_score = int(analysis.anal_relevance_score) if analysis else 0
+    coverage_score = int(analysis.anal_coverage_score) if analysis else 0
+    specificity_score = int(analysis.anal_specificity_score) if analysis else 0
+    evidence_score = int(analysis.anal_evidence_score) if analysis else 0
+    consistency_score = int(analysis.anal_consistency_score) if analysis else 0
+
+    score_items = [
+        {
+            "label": "질문-답변 맥락 적합",
+            "value": relevance_score,
+            "tone": _score_tone(relevance_score),
+        },
+        {
+            "label": "질문이 요구하는 요소 적합",
+            "value": coverage_score,
+            "tone": _score_tone(coverage_score),
+        },
+        {
+            "label": "구체성",
+            "value": specificity_score,
+            "tone": _score_tone(specificity_score),
+        },
+        {
+            "label": "근거 제시",
+            "value": evidence_score,
+            "tone": _score_tone(evidence_score),
+        },
+        {
+            "label": "이력서 적합성",
+            "value": consistency_score,
+            "tone": _score_tone(consistency_score),
+        },
+    ]
+
+    return templates.TemplateResponse(
+        "result/analysis_text.html",
+        {
+            "request": request,
+            "session_id": session_id,
+            "sel_id": sel_id,
+            "resume_id": resume.resume_id,
+            "resume": resume,
+            "question_text": question.qust_question_text,
+            "effective_text": effective_text,
+            "score_items": score_items,
+            "analysis_exists": analysis is not None,
+            "analysis": {
+                "overall_score": int(analysis.anal_overall_score) if analysis else 0,
+                "good_points": (analysis.anal_good_points or []) if analysis else [],
+                "improvement_points": (analysis.anal_improvement_points or []) if analysis else [],
+                "overall_comment": analysis.anal_overall_comment if analysis else "",
+                "revised_answer": analysis.anal_revised_answer if analysis else "",
+                "weakness": analysis.anal_weakness if analysis else [],
+                "reasons": {
+                    "relevance": analysis.anal_relevance_reason if analysis else "",
+                    "coverage": analysis.anal_coverage_reason if analysis else "",
+                    "specificity": analysis.anal_specificity_reason if analysis else "",
+                    "evidence": analysis.anal_evidence_reason if analysis else "",
+                    "consistency": analysis.anal_consistency_reason if analysis else "",
+                },
+            },
+        },
+    )
 
 def _run_submit_analysis_job(inter_id: int) -> None:
     db = SessionLocal()
@@ -372,6 +511,7 @@ def _run_submit_analysis_job(inter_id: int) -> None:
 
             sel_id = int(row.sel_id)
             sel_order_no = int(row.sel_order_no)
+
             _update_submit_progress(
                 inter_id,
                 current_index=index,
@@ -403,6 +543,7 @@ def _run_submit_analysis_job(inter_id: int) -> None:
                     _, transcript = run_stt_and_update(db=db, inter_id=inter_id, sel_id=sel_id)
                     transcript_text = (transcript.transcript_text or "").strip()
                 except Exception as exc:
+                    db.rollback()
                     failed.append(
                         {
                             "sel_id": sel_id,
@@ -434,30 +575,63 @@ def _run_submit_analysis_job(inter_id: int) -> None:
                 )
                 continue
 
-            _update_submit_progress(inter_id, message=f"Q{sel_order_no} 발화 지표 계산 중...")
-            _ = _build_effective_transcript_for_evaluation(
-                db=db,
-                inter_id=inter_id,
-                sel_id=sel_id,
-                question_text=row.question_text,
-                transcript_text=transcript_text,
-            )
+            try:
+                _update_submit_progress(inter_id, message=f"Q{sel_order_no} 전사 보정 중...")
+                _ = _build_effective_transcript_for_evaluation(
+                    db=db,
+                    inter_id=inter_id,
+                    sel_id=sel_id,
+                    question_text=row.question_text,
+                    transcript_text=transcript_text,
+                )
 
-            score_payload = calculate_speech_scores(
-                transcript_text=transcript_text,
-                duration_sec=int(row.duration_sec or 0),
-                question_text=row.question_text,
-            )
-            upsert_speech_summary(db=db, sel_id=sel_id, score=score_payload)
-            upsert_speech_detail(db=db, sel_id=sel_id, score=score_payload)
-            processed.append({"sel_id": sel_id, "sel_order_no": sel_order_no})
+                _update_submit_progress(inter_id, message=f"Q{sel_order_no} 발화 지표 계산 중...")
+                score_payload = calculate_speech_scores(
+                    transcript_text=transcript_text,
+                    duration_sec=int(row.duration_sec or 0),
+                    question_text=row.question_text,
+                )
+                upsert_speech_summary(db=db, sel_id=sel_id, score=score_payload)
+                upsert_speech_detail(db=db, sel_id=sel_id, score=score_payload)
 
-            _update_submit_progress(
-                inter_id,
-                completed=index,
-                failed_count=len(failed),
-                message=f"Q{sel_order_no} 완료",
-            )
+                # 답변 내용 분석 저장
+                _update_submit_progress(inter_id, message=f"Q{sel_order_no} 답변 내용 분석 중...")
+                analyze_answer_by_sel_id(
+                    db=db,
+                    sel_id=sel_id,
+                    model="gpt-4o-mini",
+                )
+
+                processed.append({"sel_id": sel_id, "sel_order_no": sel_order_no})
+
+                _update_submit_progress(
+                    inter_id,
+                    completed=index,
+                    failed_count=len(failed),
+                    message=f"Q{sel_order_no} 완료",
+                )
+
+            except Exception as exc:
+                db.rollback()
+                logger.exception(
+                    "SUBMIT_ANALYSIS_ITEM_FAILED inter_id=%s sel_id=%s err=%s",
+                    inter_id,
+                    sel_id,
+                    exc,
+                )
+                failed.append(
+                    {
+                        "sel_id": sel_id,
+                        "sel_order_no": sel_order_no,
+                        "reason": str(exc),
+                    }
+                )
+                _update_submit_progress(
+                    inter_id,
+                    completed=index,
+                    failed_count=len(failed),
+                    message=f"Q{sel_order_no} 분석 실패",
+                )
 
         session = db.query(InterviewSession).filter(InterviewSession.inter_id == inter_id).first()
         if session and not failed:
@@ -492,6 +666,7 @@ def _run_submit_analysis_job(inter_id: int) -> None:
             finished_at=int(time.time()),
         )
     except Exception as exc:
+        db.rollback()
         _update_submit_progress(
             inter_id,
             status="failed",
@@ -1178,10 +1353,17 @@ async def result_index(
 
 
 @web_router.get("/interviews/{session_id}/results/{sel_id}/analysis")
-async def result_analysis(request: Request, session_id: int, sel_id: int):
-    return RedirectResponse(
-        url=f"/interviews/{session_id}/results/{sel_id}/stt",
-        status_code=status.HTTP_303_SEE_OTHER,
+async def result_analysis(
+    request: Request,
+    session_id: int,
+    sel_id: int,
+    db: Session = Depends(get_db),
+):
+    return _render_analysis_text_page(
+        request=request,
+        db=db,
+        session_id=session_id,
+        sel_id=sel_id,
     )
 
 
@@ -1983,10 +2165,17 @@ async def get_transcript_payload(
     }
 
 @web_router.get("/result/analysis/text")
-async def analysis_text(request: Request, session_id: int):
-    return templates.TemplateResponse(
-        "result/analysis_text.html",
-        {"request": request, "session_id": session_id},
+async def analysis_text(
+    request: Request,
+    session_id: int,
+    sel_id: int,
+    db: Session = Depends(get_db),
+):
+    return _render_analysis_text_page(
+        request=request,
+        db=db,
+        session_id=session_id,
+        sel_id=sel_id,
     )
 
 
