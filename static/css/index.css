@@ -1,4 +1,4 @@
-/* Index Page Specific Styles */
+﻿/* Index Page Specific Styles */
 
 /* Hero Section */
 .hero-section {
@@ -19,6 +19,12 @@
 .hero-title { font-size: 54px; font-weight: 800; line-height: 1.2; margin-bottom: 24px; }
 .hero-highlight { color: var(--primary-orange); }
 .hero-desc { font-size: 20px; margin-bottom: 40px; opacity: 0.9; }
+.hero-cta-group {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
 .btn-hero {
     display: inline-block; background-color: var(--primary-orange); color: var(--white);
     padding: 18px 40px; border-radius: 40px; font-size: 18px; font-weight: 700;
@@ -29,9 +35,12 @@
     box-shadow: 0 15px 25px rgba(255, 107, 0, 0.4);
 }
 .hero-image {
-    width: 45%; max-width: 500px; height: 400px; background-color: #ddd;
-    border-radius: 20px; box-shadow: var(--shadow-md);
-    background-size: cover; background-position: center;
+    width: 45%;
+    max-width: 500px;
+    height: auto;
+    display: block;
+    border-radius: 20px;
+    box-shadow: var(--shadow-md);
 }
 
 /* Features Section */
@@ -68,11 +77,13 @@
 .feature-title { font-size: 22px; font-weight: 700; margin-bottom: 12px; color: var(--text-main); }
 .feature-desc { color: var(--text-sub); font-size: 16px; line-height: 1.6; }
 
-/* 반응형 모바일 설정 */
+/* 諛섏쓳??紐⑤컮???ㅼ젙 */
 @media (max-width: 992px) {
     .hero-container { flex-direction: column; text-align: center; }
     .hero-content { max-width: 100%; margin-bottom: 50px; }
-    .hero-image { width: 80%; height: 300px; }
+    .hero-cta-group { justify-content: center; }
+    .hero-image { width: 80%; height: auto; }
     .hero-title { font-size: 42px; }
-    nav { display: none; }
+    header > nav { display: none; }
 }
+

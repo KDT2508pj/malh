@@ -74,6 +74,13 @@
     margin-bottom: 20px;
 }
 
+.cta-group {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
 .cta {
     display: inline-block;
     background: var(--primary-orange);
@@ -90,5 +97,9 @@
 
     .step-grid {
         grid-template-columns: 1fr;
+    }
+
+    .cta-group {
+        justify-content: center;
     }
 }

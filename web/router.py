@@ -742,11 +742,6 @@ async def how_to_use(request: Request):
     return templates.TemplateResponse("how_to_use.html", {"request": request})
 
 
-@web_router.get("/contact")
-async def contact(request: Request):
-    return templates.TemplateResponse("contact.html", {"request": request})
-
-
 # Auth
 @web_router.get("/auth/login")
 async def login(request: Request):
