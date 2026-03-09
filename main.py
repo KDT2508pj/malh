@@ -28,42 +28,40 @@ import models.transcript_refine
 import models.user
 from web.router import web_router
 from core.logging import setup_logging
+from services.storage_cleanup_service import prune_empty_audio_tree
 
 from services.member_service import router as member_router
-# ✅ 피드백 라우터 추가 (파일을 services 폴더에 생성했다고 가정)
 from services.feedback_service import router as feedback_router
 
-# 앱 시작 시 테이블 생성
 Base.metadata.create_all(bind=engine)
 
-BASE_DIR = Path(__file__).resolve().parent  # .../app
-
-# ✅ 템플릿 디렉토리 설정 (templates 폴더가 app/templates에 있다고 가정)
+BASE_DIR = Path(__file__).resolve().parent
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 setup_logging()
 
+
 def create_app() -> FastAPI:
     app = FastAPI(title="Mock Interview AI", version="0.1.0")
 
-    # ✅ 어디서 실행해도 static 경로가 깨지지 않게 절대경로로 마운트
     static_dir = BASE_DIR / "static"
     app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
     app.mount("/storage", StaticFiles(directory=settings.STORAGE_DIR), name="storage")
 
-    # SSR 라우터
     app.include_router(web_router)
-
-    # 회원가입/로그인 라우터
     app.include_router(member_router)
+    app.include_router(feedback_router, tags=["feedback"])
 
-    # ✅ 피드백 라우터 등록 수정
-    app.include_router(feedback_router, tags=["feedback"])  
+    @app.on_event("startup")
+    def prune_empty_audio_dirs_on_startup() -> None:
+        # Auto-clean stale empty directories under storage/audio/interviews.
+        try:
+            prune_empty_audio_tree(Path(settings.STORAGE_DIR))
+        except Exception:
+            pass
 
-    # ✅ 메인 페이지 경로 추가
     @app.get("/", response_class=HTMLResponse)
     async def index(request: Request):
-        # 템플릿에 request를 전달해야 index.html에서 쿠키를 읽을 수 있습니다.
         return templates.TemplateResponse("index.html", {"request": request})
 
     @app.get("/health", response_class=HTMLResponse)
@@ -71,5 +69,6 @@ def create_app() -> FastAPI:
         return "ok"
 
     return app
+
 
 app = create_app()

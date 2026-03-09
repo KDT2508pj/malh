@@ -26,6 +26,10 @@ from models.resume import Resume
 from models.select_question import SelectQuestion
 from models.transcript import Transcript
 from models.transcript_refine import TranscriptRefine
+from models.speech_score_summary import SpeechScoreSummary
+from models.speech_score_detail import SpeechScoreDetail
+from models.speech_feedback import SpeechFeedback
+from models.answer_analysis import AnswerAnalysis
 from fastapi.responses import RedirectResponse
 
 from services.resume_service import (
@@ -66,6 +70,10 @@ from services.transcript_refine_service import (
     refine_transcript_with_guardrails,
     upsert_refine_result,
 )
+from services.storage_cleanup_service import (
+    prune_empty_audio_tree,
+    prune_empty_dirs_upward,
+)
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
@@ -73,6 +81,7 @@ templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 web_router = APIRouter()
 SUBMIT_ANALYSIS_PROGRESS: dict[int, dict[str, object]] = {}
 SUBMIT_ANALYSIS_LOCK = threading.Lock()
+SUBMIT_ANALYSIS_TIMEOUT_SEC = 60
 
 logger = logging.getLogger(__name__)
 
@@ -154,19 +163,111 @@ def _purge_session_audio_files(db: Session, inter_id: int) -> int:
             except Exception:
                 # Keep idempotent behavior; ignore per-file delete errors.
                 pass
+            prune_empty_dirs_upward(Path(settings.STORAGE_DIR), rel)
         # Keep DB row for compatibility, but clear physical-path metadata.
         row.file_path = ""
         row.mime_type = None
         row.size_bytes = None
     db.commit()
+    # Safety net for any leftover empty directories.
+    prune_empty_audio_tree(Path(settings.STORAGE_DIR))
     return removed
 
 
 def _update_submit_progress(inter_id: int, **fields: object) -> None:
     with SUBMIT_ANALYSIS_LOCK:
         base = SUBMIT_ANALYSIS_PROGRESS.get(inter_id, {})
+        if base.get("done"):
+            return
         base.update(fields)
         SUBMIT_ANALYSIS_PROGRESS[inter_id] = base
+
+
+def _reset_session_attempt_data(db: Session, inter_id: int) -> dict[str, int]:
+    sel_rows = db.query(SelectQuestion.sel_id).filter(SelectQuestion.inter_id == inter_id).all()
+    sel_ids = [int(row.sel_id) for row in sel_rows]
+
+    removed_files = 0
+    audio_rows = db.query(AudioRecording).filter(AudioRecording.inter_id == inter_id).all()
+    for row in audio_rows:
+        rel = (row.file_path or "").strip()
+        if rel:
+            abs_path = Path(settings.STORAGE_DIR) / rel
+            try:
+                if abs_path.exists():
+                    abs_path.unlink()
+                    removed_files += 1
+            except Exception:
+                pass
+            prune_empty_dirs_upward(Path(settings.STORAGE_DIR), rel)
+
+    removed_audio = db.query(AudioRecording).filter(AudioRecording.inter_id == inter_id).delete(
+        synchronize_session=False
+    )
+
+    removed_transcript_refine = 0
+    removed_transcript = 0
+    removed_score_summary = 0
+    removed_score_detail = 0
+    removed_speech_feedback = 0
+    removed_answer_analysis = 0
+
+    if sel_ids:
+        transcript_rows = (
+            db.query(Transcript.transcript_id)
+            .filter(Transcript.sel_id.in_(sel_ids))
+            .all()
+        )
+        transcript_ids = [int(row.transcript_id) for row in transcript_rows]
+        if transcript_ids:
+            removed_transcript_refine = (
+                db.query(TranscriptRefine)
+                .filter(TranscriptRefine.transcript_id.in_(transcript_ids))
+                .delete(synchronize_session=False)
+            )
+
+        removed_transcript = (
+            db.query(Transcript)
+            .filter(Transcript.sel_id.in_(sel_ids))
+            .delete(synchronize_session=False)
+        )
+        removed_score_summary = (
+            db.query(SpeechScoreSummary)
+            .filter(SpeechScoreSummary.sel_id.in_(sel_ids))
+            .delete(synchronize_session=False)
+        )
+        removed_score_detail = (
+            db.query(SpeechScoreDetail)
+            .filter(SpeechScoreDetail.sel_id.in_(sel_ids))
+            .delete(synchronize_session=False)
+        )
+        removed_speech_feedback = (
+            db.query(SpeechFeedback)
+            .filter(SpeechFeedback.sel_id.in_(sel_ids))
+            .delete(synchronize_session=False)
+        )
+        removed_answer_analysis = (
+            db.query(AnswerAnalysis)
+            .filter(AnswerAnalysis.sel_id.in_(sel_ids))
+            .delete(synchronize_session=False)
+        )
+        db.query(SelectQuestion).filter(SelectQuestion.inter_id == inter_id).update(
+            {SelectQuestion.sel_answer_duration_sec: 0},
+            synchronize_session=False,
+        )
+
+    db.commit()
+    prune_empty_audio_tree(Path(settings.STORAGE_DIR))
+    return {
+        "removed_audio": int(removed_audio),
+        "removed_files": int(removed_files),
+        "removed_transcript": int(removed_transcript),
+        "removed_transcript_refine": int(removed_transcript_refine),
+        "removed_score_summary": int(removed_score_summary),
+        "removed_score_detail": int(removed_score_detail),
+        "removed_speech_feedback": int(removed_speech_feedback),
+        "removed_answer_analysis": int(removed_answer_analysis),
+    }
 
 
 def _build_effective_transcript_for_evaluation(
@@ -200,6 +301,7 @@ def _build_effective_transcript_for_evaluation(
 def _run_submit_analysis_job(inter_id: int) -> None:
     db = SessionLocal()
     try:
+        job_started = time.monotonic()
         rows = (
             db.query(
                 SelectQuestion.sel_id.label("sel_id"),
@@ -244,8 +346,28 @@ def _run_submit_analysis_job(inter_id: int) -> None:
 
         processed: list[dict[str, int | str]] = []
         failed: list[dict[str, int | str]] = []
+        timed_out = False
 
         for index, row in enumerate(rows, start=1):
+            if time.monotonic() - job_started > SUBMIT_ANALYSIS_TIMEOUT_SEC:
+                timed_out = True
+                remaining_rows = rows[index - 1 :]
+                for pending in remaining_rows:
+                    failed.append(
+                        {
+                            "sel_id": int(pending.sel_id),
+                            "sel_order_no": int(pending.sel_order_no),
+                            "reason": "분석 시간 초과로 중단되었습니다.",
+                        }
+                    )
+                _update_submit_progress(
+                    inter_id,
+                    completed=len(processed) + len(failed),
+                    failed_count=len(failed),
+                    message="분석 제한 시간을 초과해 작업을 중단했습니다.",
+                )
+                break
+
             sel_id = int(row.sel_id)
             sel_order_no = int(row.sel_order_no)
             _update_submit_progress(
@@ -341,6 +463,13 @@ def _run_submit_analysis_job(inter_id: int) -> None:
             session.inter_finished_at = func.now()
             db.commit()
 
+        all_failed = total > 0 and len(failed) == total
+        reset_applied = False
+        reset_summary: dict[str, int] | None = None
+        if all_failed:
+            reset_summary = _reset_session_attempt_data(db=db, inter_id=inter_id)
+            reset_applied = True
+
         _update_submit_progress(
             inter_id,
             status="done",
@@ -350,7 +479,14 @@ def _run_submit_analysis_job(inter_id: int) -> None:
             failed_count=len(failed),
             processed=processed,
             failed=failed,
-            message="분석이 완료되었습니다." if not failed else "일부 질문 분석에 실패했습니다.",
+            timed_out=timed_out,
+            reset_applied=reset_applied,
+            reset_summary=reset_summary,
+            message=(
+                "모든 질문 분석 실패로 녹음/분석 상태를 초기화했습니다."
+                if reset_applied
+                else ("분석이 완료되었습니다." if not failed else "일부 질문 분석에 실패했습니다.")
+            ),
             finished_at=int(time.time()),
         )
     except Exception as exc:
@@ -1578,6 +1714,24 @@ async def get_submit_analysis_progress(
 ):
     with SUBMIT_ANALYSIS_LOCK:
         progress = dict(SUBMIT_ANALYSIS_PROGRESS.get(inter_id, {}))
+        if progress and progress.get("status") == "running" and not progress.get("done"):
+            started_at = int(progress.get("started_at") or 0)
+            if started_at and (int(time.time()) - started_at) > SUBMIT_ANALYSIS_TIMEOUT_SEC:
+                total = int(progress.get("total") or 0)
+                completed = int(progress.get("completed") or 0)
+                existing_failed = int(progress.get("failed_count") or 0)
+                progress.update(
+                    {
+                        "status": "failed",
+                        "done": True,
+                        "ok": False,
+                        "timed_out": True,
+                        "failed_count": max(existing_failed, max(0, total - completed)),
+                        "message": "분석 시간이 초과되어 작업을 종료했습니다. 다시 녹음 후 제출해 주세요.",
+                        "finished_at": int(time.time()),
+                    }
+                )
+                SUBMIT_ANALYSIS_PROGRESS[inter_id] = dict(progress)
 
     if not progress:
         raise HTTPException(

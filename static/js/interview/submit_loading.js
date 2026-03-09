@@ -38,8 +38,11 @@ async function pollProgress() {
                     return;
                 }
                 const firstFailed = data.failed && data.failed[0] ? data.failed[0].reason : "알 수 없는 오류";
-                alert(`분석 중 실패가 발생했습니다. (${failedCount}건)\n${firstFailed}`);
-                location.href = `/interviews/${sessionId}/results`;
+                const resetNotice = data.reset_applied
+                    ? "\n녹음/분석 상태를 초기화했습니다. 다시 녹음해 주세요."
+                    : "";
+                alert(`분석 중 실패가 발생했습니다. (${failedCount}건)\n${firstFailed}${resetNotice}`);
+                location.href = `/interviews/${sessionId}`;
                 return;
             }
         } catch (error) {
