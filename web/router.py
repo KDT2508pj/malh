@@ -2,6 +2,7 @@ from pathlib import Path
 import threading
 import time
 import logging
+from typing import List
 from fastapi import (
     APIRouter,
     Depends,
@@ -631,7 +632,7 @@ async def resume_list(
 async def create_resume(
     request: Request,
     model: str = Form(DEFAULT_MODEL),
-    file: UploadFile = File(...),
+    files: List[UploadFile] = File(...),
     db: Session = Depends(get_db),
 ):
     login_user = request.cookies.get("login_user")
@@ -645,6 +646,17 @@ async def create_resume(
     )
     if not user:
         raise HTTPException(status_code=401, detail="유효하지 않은 로그인 정보입니다.")
+
+    if not files or len(files) == 0:
+        raise HTTPException(status_code=400, detail="업로드할 파일이 없습니다.")
+
+    if len(files) > 1:
+        raise HTTPException(
+            status_code=400,
+            detail="이력서는 한 번에 1개만 업로드할 수 있습니다.",
+        )
+
+    file = files[0]
 
     try:
         data = await file.read()
@@ -665,7 +677,6 @@ async def create_resume(
         "resume_id": resume.resume_id,
         "model": model,
     }
-
 
 @web_router.get("/resumes/{resume_id}/wait")
 async def resume_wait(

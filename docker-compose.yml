@@ -1,0 +1,47 @@
+services:
+  db:
+    image: mysql:8.0
+    container_name: interview-db
+    restart: always
+    environment:
+      MYSQL_DATABASE: interview_db
+      MYSQL_USER: interview_user
+      MYSQL_PASSWORD: interview_pass
+      MYSQL_ROOT_PASSWORD: root_pass
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - interview-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    container_name: interview-app
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=mysql+pymysql://interview_user:interview_pass@db:3306/interview_db?charset=utf8mb4
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./storage:/app/storage
+      - ./uploads:/app/uploads
+    networks:
+      - interview-network
+
+networks:
+  interview-network:
+    driver: bridge
+
+volumes:
+  mysql_data:

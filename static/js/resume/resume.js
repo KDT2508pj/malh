@@ -20,6 +20,10 @@ $(function () {
 
     // 2. 화면 전환 이벤트
 
+    // 업로드 제한값 상수화
+    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+    const ALLOWED_EXTENSIONS = ['pdf', 'docx'];
+
     // [등록 버튼 클릭] -> 리스트 숨김, 업로드 표시
     $('#go-upload-btn').on('click', function () {
         $dashboardView.fadeOut(200, function () {
@@ -63,26 +67,65 @@ $(function () {
         $(this).removeClass('drag-over');
     });
 
+    // 공통 파일 검증 함수 추가
+    function validateFiles(files) {
+        if (!files || files.length === 0) {
+            alert('업로드할 파일이 없습니다.');
+            return null;
+        }
+
+        if (files.length > 1) {
+            alert('이력서는 한 번에 1개만 업로드할 수 있습니다.');
+            return null;
+        }
+
+        const file = files[0];
+        const fileName = file.name || '';
+        const extension = fileName.includes('.')
+            ? fileName.split('.').pop().toLowerCase()
+            : '';
+
+        if (!ALLOWED_EXTENSIONS.includes(extension)) {
+            alert('PDF, DOCX 파일만 업로드할 수 있습니다.');
+            return null;
+        }
+
+        if (file.size > MAX_FILE_SIZE) {
+            alert('파일 크기는 최대 10MB까지 가능합니다.');
+            return null;
+        }
+
+        return file;
+    }
+
     // 파일 드롭 시 처리
     $dropZone.on('drop', function (e) {
         const files = e.originalEvent.dataTransfer.files;
-        if (files.length > 0) {
-            handleFileUpload(files[0]);
-        }
+
+        // 여러 개 드롭 방지 + 검증
+        const file = validateFiles(files);
+        if (!file) return;
+
+        handleFileUpload(file);
     });
 
     // 파일 선택(input) 시 처리
     $fileInput.on('change', function () {
-        if (this.files.length > 0) {
-            handleFileUpload(this.files[0]);
+        // 공통 검증 함수 사용
+        const file = validateFiles(this.files);
+        if (!file) {
+            $fileInput.val('');
+            return;
         }
+
+        handleFileUpload(file);
     });
 
     // 실제 업로드 처리
     async function handleFileUpload(file) {
         const formData = new FormData();
         formData.append('model', model);
-        formData.append('file', file);
+        formData.append('files', file);
 
         try {
             const response = await fetch('/resumes', {
