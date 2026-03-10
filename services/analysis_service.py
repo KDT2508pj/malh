@@ -7,7 +7,6 @@ from sqlalchemy.orm import Session, joinedload
 from models.answer_analysis import AnswerAnalysis
 from models.interview_session import InterviewSession
 from models.select_question import SelectQuestion
-from models.transcript import Transcript
 from services.prompt.analysis.answer_analysis_prompt import ANSWER_ANALYSIS_SYSTEM_PROMPT
 from schemas.answer_analysis_schema import (
     AnswerAnalysisLLMResult,
@@ -31,10 +30,7 @@ def _pick_answer_text(select_question: SelectQuestion) -> str:
     if not transcript:
         raise ValueError("Transcript가 없습니다.")
 
-    refine = transcript.transcript_refine
-    if refine and refine.r_refined_text and refine.r_refined_text.strip():
-        return refine.r_refined_text.strip()
-
+    # transcript_refine 모델이 제거되었으므로 transcript_text만 사용
     if transcript.transcript_text and transcript.transcript_text.strip():
         return transcript.transcript_text.strip()
 
@@ -101,7 +97,7 @@ def _build_user_prompt(
 [질문 근거]
 {json.dumps(question_evidence, ensure_ascii=False)}
 
-[정제 답변]
+[답변]
 {_limit_text(answer_text, 6000)}
 
 [이력서 추출 텍스트]
@@ -118,7 +114,7 @@ def analyze_answer_by_sel_id(
         db.query(SelectQuestion)
         .options(
             joinedload(SelectQuestion.question),
-            joinedload(SelectQuestion.transcript).joinedload(Transcript.transcript_refine),
+            joinedload(SelectQuestion.transcript),
             joinedload(SelectQuestion.interview_session).joinedload(InterviewSession.resume),
             joinedload(SelectQuestion.answer_analysis),
         )
