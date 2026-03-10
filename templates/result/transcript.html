@@ -1,6 +1,6 @@
 {% extends "layouts/base.html" %}
 
-{% block title %}텍스트 보기 - 말해뭐해{% endblock %}
+{% block title %}컨텍스트 분석 - 말해뭐해{% endblock %}
 
 {% block head %}
 <link rel="stylesheet" href="/static/css/result/text.css?v=20260313">
@@ -9,7 +9,7 @@
 {% block content %}
 <div class="transcript-container-wrapper">
     <div class="container">
-        <h2 class="page-title">텍스트 보기</h2>
+        <h2 class="page-title">컨텍스트 분석</h2>
 
         <div class="question-box">
             <span class="q-badge">Question {{ transcript_item.sel_order_no }}</span>
@@ -37,9 +37,68 @@
             </div>
         </div>
 
+        <section class="text-score-card">
+            <div class="score-head">
+                <h3 class="score-title">텍스트 점수 분석</h3>
+                <p class="score-subtitle">답변 텍스트를 항목별로 정량 평가한 결과입니다.</p>
+            </div>
+
+            <div class="score-metric-grid">
+                <article class="metric-card">
+                    <div class="metric-top">
+                        <span class="metric-name">질문-답변 맥락 적합</span>
+                        <span class="metric-score">{% if transcript_item.relevance_score is not none %}{{ transcript_item.relevance_score }}점{% else %}-{% endif %}</span>
+                    </div>
+                    <div class="metric-track">
+                        <div class="metric-fill" style="width:{% if transcript_item.relevance_score is not none %}{{ transcript_item.relevance_score }}{% else %}0{% endif %}%;"></div>
+                    </div>
+                </article>
+
+                <article class="metric-card">
+                    <div class="metric-top">
+                        <span class="metric-name">질문이 요구하는 요소 적합</span>
+                        <span class="metric-score">{% if transcript_item.coverage_score is not none %}{{ transcript_item.coverage_score }}점{% else %}-{% endif %}</span>
+                    </div>
+                    <div class="metric-track">
+                        <div class="metric-fill" style="width:{% if transcript_item.coverage_score is not none %}{{ transcript_item.coverage_score }}{% else %}0{% endif %}%;"></div>
+                    </div>
+                </article>
+
+                <article class="metric-card">
+                    <div class="metric-top">
+                        <span class="metric-name">구체성</span>
+                        <span class="metric-score">{% if transcript_item.specificity_score is not none %}{{ transcript_item.specificity_score }}점{% else %}-{% endif %}</span>
+                    </div>
+                    <div class="metric-track">
+                        <div class="metric-fill" style="width:{% if transcript_item.specificity_score is not none %}{{ transcript_item.specificity_score }}{% else %}0{% endif %}%;"></div>
+                    </div>
+                </article>
+
+                <article class="metric-card">
+                    <div class="metric-top">
+                        <span class="metric-name">근거</span>
+                        <span class="metric-score">{% if transcript_item.evidence_score is not none %}{{ transcript_item.evidence_score }}점{% else %}-{% endif %}</span>
+                    </div>
+                    <div class="metric-track">
+                        <div class="metric-fill" style="width:{% if transcript_item.evidence_score is not none %}{{ transcript_item.evidence_score }}{% else %}0{% endif %}%;"></div>
+                    </div>
+                </article>
+
+                <article class="metric-card">
+                    <div class="metric-top">
+                        <span class="metric-name">이력서 적합성</span>
+                        <span class="metric-score">{% if transcript_item.consistency_score is not none %}{{ transcript_item.consistency_score }}점{% else %}-{% endif %}</span>
+                    </div>
+                    <div class="metric-track">
+                        <div class="metric-fill" style="width:{% if transcript_item.consistency_score is not none %}{{ transcript_item.consistency_score }}{% else %}0{% endif %}%;"></div>
+                    </div>
+                </article>
+            </div>
+        </section>
+
         <div class="next-btn-area">
             <button class="next-btn" onclick="location.href='/interviews/{{ session_id }}/results/{{ sel_id }}/stt'">
-                답변분석 보기
+                종합분석 보기
             </button>
         </div>
 

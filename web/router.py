@@ -84,7 +84,7 @@ templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 web_router = APIRouter()
 SUBMIT_ANALYSIS_PROGRESS: dict[int, dict[str, object]] = {}
 SUBMIT_ANALYSIS_LOCK = threading.Lock()
-SUBMIT_ANALYSIS_TIMEOUT_SEC = 60
+SUBMIT_ANALYSIS_TIMEOUT_SEC = 180
 
 logger = logging.getLogger(__name__)
 
@@ -1408,10 +1408,16 @@ async def result_transcript(
             AudioRecording.file_path.label("file_path"),
             Transcript.transcript_text.label("transcript_text"),
             Transcript.refined_text.label("refined_text"),
+            AnswerAnalysis.anal_relevance_score.label("relevance_score"),
+            AnswerAnalysis.anal_coverage_score.label("coverage_score"),
+            AnswerAnalysis.anal_specificity_score.label("specificity_score"),
+            AnswerAnalysis.anal_evidence_score.label("evidence_score"),
+            AnswerAnalysis.anal_consistency_score.label("consistency_score"),
         )
         .join(Question, Question.qust_id == SelectQuestion.qust_id)
         .outerjoin(AudioRecording, AudioRecording.sel_id == SelectQuestion.sel_id)
         .outerjoin(Transcript, Transcript.sel_id == SelectQuestion.sel_id)
+        .outerjoin(AnswerAnalysis, AnswerAnalysis.sel_id == SelectQuestion.sel_id)
         .filter(SelectQuestion.inter_id == session_id, SelectQuestion.sel_id == sel_id)
         .first()
     )
@@ -1446,6 +1452,11 @@ async def result_transcript(
                 "duration_sec": int(row.duration_sec or 0),
                 "transcript_text": effective_text,
                 "audio_url": audio_url,
+                "relevance_score": row.relevance_score,
+                "coverage_score": row.coverage_score,
+                "specificity_score": row.specificity_score,
+                "evidence_score": row.evidence_score,
+                "consistency_score": row.consistency_score,
             },
         },
     )
