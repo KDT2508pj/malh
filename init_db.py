@@ -1,5 +1,6 @@
 from core.database import engine
 from models.base import Base
+from sqlalchemy import text
 
 from models.user import User
 from models.resume import Resume
@@ -17,14 +18,20 @@ from models.answer_analysis import AnswerAnalysis
 from models.speech_score_summary import SpeechScoreSummary
 from models.speech_score_detail import SpeechScoreDetail
 from models.speech_feedback import SpeechFeedback
+from models.audio_recording import AudioRecording
 
 
 def main():
-    Base.metadata.drop_all(bind=engine)
-    print("🗑️ 기존 테이블 삭제 완료")
+    with engine.connect() as conn:
+        conn.execute(text("SET FOREIGN_KEY_CHECKS = 0"))
 
-    Base.metadata.create_all(bind=engine)
-    print("✅ 테이블 재생성 완료")
+        Base.metadata.drop_all(bind=engine)
+        print("🗑️ 기존 테이블 삭제 완료")
+
+        Base.metadata.create_all(bind=engine)
+        print("✅ 테이블 재생성 완료")
+
+        conn.execute(text("SET FOREIGN_KEY_CHECKS = 1"))
 
 
 if __name__ == "__main__":
