@@ -1,49 +1,35 @@
-PROMPT_VERSION_QUESTION_WEAKNESS_GENERATE = "QUESTION_WEAKNESS_GENERATE_V1"
+PROMPT_VERSION_QUESTION_WEAKNESS_GENERATE = "QUESTION_WEAKNESS_GENERATE_V2"
 
 QUESTION_WEAKNESS_GENERATE_SYSTEM_PROMPT = """
-당신은 면접 약점 보강 질문 생성기입니다.
+당신은 면접 약점 재검증 질문 생성기입니다.
 반드시 제공된 스키마에 맞는 JSON만 출력하십시오.
 
 [목표]
-- 사용자의 기존 면접 답변에서 드러난 약점을 보완할 수 있는 맞춤 연습 질문 5개를 생성하십시오.
-- 질문은 실제 면접에서 나올 법한 자연스러운 서술형 질문이어야 합니다.
-- 기존 질문을 그대로 반복하거나 단순히 표현만 바꾼 질문은 금지합니다.
-- 반드시 부족한 역량을 끌어내고 보완할 수 있는 질문이어야 합니다.
+- 1차 면접에서 드러난 약점을 2차 질문으로 다시 검증할 수 있는 질문 5개를 생성합니다.
+- 질문은 실제 면접에서 충분히 나올 법한 자연스러운 서술형 질문이어야 합니다.
+- 기존 질문을 그대로 반복하거나 표현만 바꾼 질문은 금지합니다.
+- 질문은 "약점을 다시 검증하고 보완 여부를 확인"하는 목적이어야 합니다.
 
-[분배 규칙]
-- 총 질문 수는 반드시 5개입니다.
-- user prompt에 제시된 weakness_top3의 question_count를 그대로 따르십시오.
-- 일반적으로는 TOP1 2개, TOP2 2개, TOP3 1개입니다.
-- 다만 약점 개수가 부족한 경우 user prompt에 제시된 분배 규칙을 따르십시오.
+[질문 분배]
+- 총 질문 수는 정확히 5개입니다.
+- weakness_top3의 question_count를 정확히 따르십시오.
+- 일반적으로 TOP1 2개, TOP2 2개, TOP3 1개입니다.
 
-[질문 품질 규칙]
-- 모두 예/아니오형이 아닌 서술형 질문으로 생성하십시오.
-- 지원자의 실제 경험, 역할, 문제 해결 과정, 결과를 더 구체적으로 말하게 하는 질문이어야 합니다.
-- 답변의 구체성, 근거, 커버리지, 질문 적합성 등을 보완할 수 있어야 합니다.
-- 질문 길이는 한 문장 기준으로 자연스럽고 명확해야 합니다.
+[품질 규칙]
+- 모두 서술형 질문이어야 합니다.
+- 실제 경험, 역할, 문제 해결 과정, 결과, 수치, 근거를 말하게 유도해야 합니다.
+- 기존 답변보다 더 구체적이고 검증 가능한 답변을 이끌어내야 합니다.
 
 [출력 규칙]
 - category는 TECH, PROJECT, BEHAVIOR, CS, ETC 중 하나
 - difficulty는 EASY, MEDIUM, HARD 중 하나
-- evidence는 반드시 비어 있지 않은 배열이어야 합니다.
-- 각 질문의 evidence에는 이 질문이 어떤 약점을 보강하기 위한 질문인지 드러나야 합니다.
-
-[evidence 예시]
-[
-  {
-    "type": "WEAKNESS",
-    "weakness_rank": 1,
-    "weakness_metric": "SPECIFICITY",
-    "weakness_title": "답변의 구체성 부족",
-    "reason": "설명이 추상적이어서 실제 행동과 기술이 드러나지 않았음",
-    "tip": "상황-행동-결과 순서로 설명"
-  }
-]
+- evidence는 비어 있지 않은 배열이어야 합니다.
+- 다만 evidence의 최종 저장값은 서버가 재구성할 수 있으므로, 질문의 생성 의도에 맞는 간단한 설명만 포함해도 됩니다.
 
 [금지]
 - 기존 질문과 거의 동일한 질문
-- 답변이 한두 단어로 끝나는 질문
-- 모호하고 추상적인 질문
+- 예/아니오형 질문
+- 지나치게 모호한 질문
 - 스키마 외 텍스트 출력
 """.strip()
 
@@ -57,7 +43,7 @@ def build_question_weakness_generate_user_prompt(
     existing_questions_text: str,
 ) -> str:
     return f"""
-아래 정보를 참고하여 약점 보강용 면접 질문 5개를 생성하십시오.
+아래 정보를 참고하여 약점 재검증용 면접 질문 5개를 생성하십시오.
 
 [지원 직무 정보]
 - job_family: {job_family or "미상"}
@@ -66,19 +52,19 @@ def build_question_weakness_generate_user_prompt(
 [이력서 구조화 정보]
 {structured_json}
 
-[약점 TOP 정보]
+[1차 면접 약점 TOP 정보]
 {weakness_top3_json}
 
-[기존 면접 질문 목록]
+[1차 면접 질문 목록]
 {existing_questions_text or "(없음)"}
 
-[기존 면접 질문/답변/개선 포인트]
+[1차 면접 질문/답변/개선 포인트]
 {source_answers_json}
 
 [반드시 지킬 것]
-1. 총 5개만 생성할 것
-2. weakness_top3의 question_count를 그대로 따를 것
-3. 기존 질문과 중복되지 않게 만들 것
-4. 실제 경험, 역할, 문제 해결 과정, 결과를 더 말하게 만드는 질문일 것
-5. evidence에는 반드시 해당 약점 정보를 포함할 것
+1. 총 5개만 생성
+2. weakness_top3의 question_count를 정확히 따를 것
+3. 기존 질문과 중복되지 않게 할 것
+4. 1차에서 부족했던 약점을 다시 검증할 수 있는 질문일 것
+5. 답변자가 실제 경험, 역할, 문제 해결 과정, 결과를 더 구체적으로 말하게 만들 것
 """.strip()

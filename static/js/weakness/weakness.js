@@ -16,8 +16,9 @@ function goToWeaknessDetail(id) {
 function completeReinforcement() {
     const sessionId = getSessionIdFromPath();
     if (!sessionId) return;
-    if (confirm("모든 보강 연습을 마치고 최종 결과를 확인하시겠습니까?")) {
-        $(location).attr("href", `/interviews/${sessionId}/results`);
+
+    if (confirm("보강 연습 결과를 분석해 개선 추적 리포트를 확인하시겠습니까?")) {
+        $(location).attr("href", `/interviews/${sessionId}/weakness/report`);
     }
 }
 

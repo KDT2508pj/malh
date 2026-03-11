@@ -1,0 +1,202 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}개선 추적 리포트 - 말해뭐해{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="/static/css/weakness/report.css">
+{% endblock %}
+
+{% block content %}
+<div class="report-container-wrapper">
+    <div class="container">
+        <div class="page-header">
+            <h2 class="page-title">개선 추적 리포트</h2>
+            <p class="page-desc">
+                1차 진단 면접과 2차 보강 면접을 비교하여 약점이 실제로 얼마나 개선되었는지 확인합니다.
+            </p>
+        </div>
+
+        <section class="overview-section">
+            <div class="overview-card highlight">
+                <div class="overview-label">전체 개선 상태</div>
+                <div class="overview-value">{{ report.overview.overall_status }}</div>
+            </div>
+
+            <div class="overview-card">
+                <div class="overview-label">개선 이행률</div>
+                <div class="overview-value">{{ report.overview.improvement_rate }}%</div>
+                <div class="overview-sub">
+                    {{ report.overview.tracked_count }}개 약점 중 {{ report.overview.improved_count }}개 개선 확인
+                </div>
+            </div>
+
+            <div class="overview-card">
+                <div class="overview-label">가장 크게 개선된 역량</div>
+                <div class="overview-value">{{ report.overview.best_metric_label }}</div>
+                <div class="overview-sub">
+                    {% if report.overview.best_metric_delta >= 0 %}+{% endif %}{{ report.overview.best_metric_delta }}
+                </div>
+            </div>
+
+            <div class="overview-card">
+                <div class="overview-label">가장 유지가 필요한 역량</div>
+                <div class="overview-value">{{ report.overview.weakest_metric_label }}</div>
+                <div class="overview-sub">
+                    {% if report.overview.weakest_metric_delta >= 0 %}+{% endif %}{{ report.overview.weakest_metric_delta }}
+                </div>
+            </div>
+
+            <div class="overview-card">
+                <div class="overview-label">최종 면접 안정도</div>
+                <div class="overview-value">{{ report.overview.stability_status }}</div>
+            </div>
+        </section>
+
+        <section class="section-block">
+            <div class="section-head">
+                <h3 class="section-title">약점별 재검증 결과</h3>
+                <p class="section-desc">
+                    1차에서 지적된 약점이 2차 보강 면접에서 어떻게 달라졌는지 보여줍니다.
+                </p>
+            </div>
+
+            <div class="tracking-card-list">
+                {% for card in report.cards %}
+                <article class="tracking-card">
+                    <div class="tracking-card-title-row">
+                        <h4 class="tracking-card-title">{{ card.title }}</h4>
+                        <span class="tracking-card-status">{{ card.status }}</span>
+                    </div>
+
+                    <div class="score-compare-row">
+                        <div class="score-box">
+                            <span class="score-label">1차</span>
+                            <strong class="score-value">{{ card.before_score }}</strong>
+                        </div>
+
+                        <div class="score-arrow">→</div>
+
+                        <div class="score-box">
+                            <span class="score-label">2차</span>
+                            <strong class="score-value">{{ card.after_score }}</strong>
+                        </div>
+
+                        <div class="delta-box {% if card.delta >= 0 %}plus{% else %}minus{% endif %}">
+                            {% if card.delta >= 0 %}+{% endif %}{{ card.delta }}
+                        </div>
+                    </div>
+
+                    <div class="state-block">
+                        <div class="state-item">
+                            <div class="state-label">1차 상태</div>
+                            <p class="state-text">{{ card.before_state }}</p>
+                        </div>
+
+                        <div class="state-item">
+                            <div class="state-label">2차 상태</div>
+                            <p class="state-text">{{ card.after_state }}</p>
+                        </div>
+                    </div>
+
+                    {% if card.tip %}
+                    <div class="tip-box">
+                        <span class="tip-label">다음 면접 팁</span>
+                        <p class="tip-text">{{ card.tip }}</p>
+                    </div>
+                    {% endif %}
+                </article>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="section-block">
+            <div class="section-head">
+                <h3 class="section-title">역량 변화 표</h3>
+                <p class="section-desc">
+                    질문 단위가 아니라 역량 축 기준으로 비교한 전후 변화입니다.
+                </p>
+            </div>
+
+            <div class="table-wrap">
+                <table class="change-table">
+                    <thead>
+                        <tr>
+                            <th>역량</th>
+                            <th>1차</th>
+                            <th>2차</th>
+                            <th>변화</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in report.competency_changes %}
+                        <tr>
+                            <td>{{ row.label }}</td>
+                            <td>{{ row.before_score }}</td>
+                            <td>{{ row.after_score }}</td>
+                            <td class="{% if row.delta >= 0 %}plus{% else %}minus{% endif %}">
+                                {% if row.delta >= 0 %}+{% endif %}{{ row.delta }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="section-block">
+            <div class="section-head">
+                <h3 class="section-title">질문별 재검증 목록</h3>
+                <p class="section-desc">
+                    2차 질문이 어떤 1차 약점을 다시 검증했는지 확인할 수 있습니다.
+                </p>
+            </div>
+
+            <div class="question-list">
+                {% for item in report.question_items %}
+                <a class="question-card" href="/interviews/{{ session_id }}/weakness/report/{{ item.sel_id }}">
+                    <div class="question-meta">
+                        <span class="q-badge">Q{{ item.sel_order_no }}</span>
+                        <span class="target-badge">{{ item.target_label }}</span>
+                    </div>
+
+                    <div class="question-text">{{ item.question_text }}</div>
+
+                    <div class="question-sub">
+                        연결된 1차 질문:
+                        {% if item.source_sel_order_no %}
+                            Q{{ item.source_sel_order_no }}
+                        {% else %}
+                            연결 정보 없음
+                        {% endif %}
+                        · 결과: {{ item.status }}
+                        · 변화:
+                        {% if item.delta >= 0 %}+{% endif %}{{ item.delta }}
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="section-block">
+            <div class="section-head">
+                <h3 class="section-title">다음 면접 전 우선 보완 3가지</h3>
+            </div>
+
+            <div class="guide-list">
+                {% if report.action_guides %}
+                    {% for guide in report.action_guides %}
+                    <div class="guide-item">{{ loop.index }}. {{ guide }}</div>
+                    {% endfor %}
+                {% else %}
+                    <div class="guide-item">추가 보완 가이드가 없습니다.</div>
+                {% endif %}
+            </div>
+        </section>
+
+        <div class="bottom-action">
+            <a href="/interviews/{{ report.source_session_id }}/results" class="btn-secondary">1차 결과 다시 보기</a>
+            <a href="/interviews/{{ session_id }}/weakness" class="btn-primary">보강 질문 목록으로</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

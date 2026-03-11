@@ -1,10 +1,3 @@
-/**
- * weakness_wait.js
- * - 시뮬레이션 제거
- * - 실제 약점 보강 질문 생성 API 호출
- * - 생성 완료 후 새 weakness session으로 이동
- */
-
 function getSourceSessionIdFromPath() {
     const match = window.location.pathname.match(/\/interviews\/(\d+)\/weakness\/wait/);
     return match ? Number(match[1]) : 0;
@@ -44,7 +37,7 @@ $(function () {
         const interval = startFakeProgress();
 
         try {
-            const response = await fetch(`/api/interviews/${sessionId}/weakness/start`, {
+            const response = await fetch(`/interviews/${sessionId}/weakness/start`, {
                 method: "POST",
             });
 
