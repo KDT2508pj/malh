@@ -79,6 +79,7 @@ from services.storage_cleanup_service import (
 )
 
 from services.analysis_service import analyze_answer_by_sel_id
+from services.weakness_service import get_session_weakness_top3
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
@@ -1225,6 +1226,12 @@ async def result_index(
         for row in rows
     ]
 
+    weakness_top3 = get_session_weakness_top3(
+        db=db,
+        session_id=session_id,
+        top_k=3,
+    )
+
     return templates.TemplateResponse(
         "result/index.html",
         {
@@ -1232,6 +1239,7 @@ async def result_index(
             "session_id": session_id,
             "resume_id": _get_resume_id_by_session(db, session_id),
             "result_items": result_items,
+            "weakness_top3": weakness_top3,
         },
     )
 

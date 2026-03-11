@@ -11,8 +11,62 @@
     <div class="container">
         <div class="page-header">
             <h2 class="page-title">분석 결과</h2>
-            <p class="page-guide">카드를 클릭하면 피드백을 볼수 있어요</p>
+            <p class="page-guide">질문 카드를 클릭하면 상세 피드백을 볼 수 있어요</p>
         </div>
+
+        <!-- 약점 TOP 3 요약 -->
+        <section class="weakness-summary-section">
+            <div class="weakness-summary-head">
+                <div>
+                    <h3 class="weakness-summary-title">우선 개선 포인트 TOP 3</h3>
+                    <p class="weakness-summary-desc">
+                        이번 면접에서 먼저 보완하면 좋은 약점을 순위별로 확인해 보세요.
+                    </p>
+                </div>
+            </div>
+
+            {% if weakness_top3 %}
+            <div class="weakness-top3-list">
+                {% for weakness in weakness_top3 %}
+                <article class="weakness-rank-card rank-{{ loop.index }}">
+                    <div class="weakness-rank-badge">{{ loop.index }}</div>
+
+                    <div class="weakness-rank-content">
+                        <div class="weakness-rank-top">
+                            <h4 class="weakness-rank-title">{{ weakness.title }}</h4>
+                        </div>
+
+                        <p class="weakness-rank-summary">
+                            {{ weakness.summary }}
+                        </p>
+
+                        {% if weakness.related_questions %}
+                        <div class="weakness-related-row">
+                            <span class="weakness-related-label">관련 질문</span>
+                            <div class="weakness-related-tags">
+                                {% for q in weakness.related_questions %}
+                                <span class="weakness-related-tag">Q{{ q }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if weakness.tip %}
+                        <div class="weakness-tip-box">
+                            <span class="weakness-tip-label">개선 팁</span>
+                            <p class="weakness-tip-text">{{ weakness.tip }}</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </article>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="weakness-empty-box">
+                아직 약점 요약 데이터가 없습니다. 질문별 분석이 완료되면 우선 개선 포인트를 보여드립니다.
+            </div>
+            {% endif %}
+        </section>
 
         <div class="result-list">
             {% if result_items %}
@@ -49,7 +103,9 @@
                                         {% if item.speech_ready %}준비됨{% else %}대기 중{% endif %}
                                     </button>
                                 </div>
-                                <p class="card-desc">발화 속도, 명료도, 구조, 길이 지표를 기반으로 LLM이 발화 피드백을 생성합니다.</p>
+                                <p class="card-desc">
+                                    발화 속도, 명료도, 구조, 길이 지표를 기반으로 LLM이 발화 피드백을 생성합니다.
+                                </p>
                                 <div class="placeholder-box" data-speech-feedback-output>
                                     {% if item.speech_ready %}
                                     카드를 펼치면 발화 피드백이 자동으로 생성됩니다. 다시 생성하려면 상태 버튼을 누르세요.
@@ -66,7 +122,9 @@
                                         {% if item.context_ready %}준비됨{% else %}연결 예정{% endif %}
                                     </span>
                                 </div>
-                                <p class="card-desc">질문 적합성, 근거, 구체성, 일관성 지표를 기반으로 한 컨텍스트 피드백 영역입니다.</p>
+                                <p class="card-desc">
+                                    질문 적합성, 근거, 구체성, 일관성 지표를 기반으로 한 컨텍스트 피드백 영역입니다.
+                                </p>
                                 <div class="placeholder-box">
                                     {% if item.context_ready %}
                                     컨텍스트 분석 데이터는 준비되어 있지만, 목록 화면에서는 아직 요약 텍스트를 별도 호출하지 않습니다.
@@ -76,7 +134,6 @@
                                 </div>
                             </section>
                         </div>
-
                     </div>
                 </div>
                 {% endfor %}
@@ -92,9 +149,14 @@
         </div>
 
         <div class="page-bottom-action">
-            <button type="button" class="btn-weakness" onclick="location.href='/interviews/{{ session_id }}/weakness'">약점보완 하기</button>
+            <button
+                type="button"
+                class="btn-weakness"
+                onclick="location.href='/interviews/{{ session_id }}/weakness'"
+            >
+                약점보완 하기
+            </button>
         </div>
-
     </div>
 </div>
 {% endblock %}
