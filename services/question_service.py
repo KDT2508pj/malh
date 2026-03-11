@@ -31,14 +31,12 @@ from services.prompt.question.generate_prompt import (
     build_question_generate_user_prompt,
 )
 
-# ✅ 추가: 약점 보강 전용 프롬프트
 from services.prompt.question.generate_weakness_prompt import (
     PROMPT_VERSION_QUESTION_WEAKNESS_GENERATE,
     QUESTION_WEAKNESS_GENERATE_SYSTEM_PROMPT,
     build_question_weakness_generate_user_prompt,
 )
 
-# ✅ 추가: 세션 약점 TOP3 계산 재사용
 from services.weakness_service import get_session_weakness_top3
 
 load_dotenv()
@@ -221,7 +219,7 @@ def generate_question_candidates_llm(
     return resp.output_parsed
 
 
-# ✅ 추가: 약점 보강 전용 LLM 호출
+# 약점 재검증 질문 생성 LLM
 def generate_weakness_question_candidates_llm(
     structured_payload: dict,
     job_family: Optional[str],
@@ -268,7 +266,7 @@ def generate_weakness_question_candidates_llm(
     )
 
     if resp.output_parsed is None:
-        raise RuntimeError("약점 보강 질문 생성 파싱 실패")
+        raise RuntimeError("약점 재검증 질문 생성 파싱 실패")
 
     return resp.output_parsed
 
@@ -289,21 +287,24 @@ def create_question_set(
     db.refresh(row)
     return row
 
-
-# ✅ 변경: selected 파라미터 추가
 def save_question_candidates(
     db: Session,
     set_id: int,
     items: List[QuestionCandidateItem],
     selected: int = 0,
+    evidence_overrides: Optional[list[list[dict[str, Any]]]] = None,
 ) -> None:
-    for item in items:
+    for idx, item in enumerate(items):
+        evidence_value = item.evidence
+        if evidence_overrides and idx < len(evidence_overrides):
+            evidence_value = evidence_overrides[idx]
+
         row = Question(
             set_id=set_id,
             qust_category=item.category,
             qust_difficulty=item.difficulty,
             qust_question_text=normalize_question_text(item.question_text),
-            qust_evidence=item.evidence,
+            qust_evidence=evidence_value,
             qust_is_selected=selected,
         )
         db.add(row)
@@ -551,22 +552,44 @@ def generate_questions_for_resume(
         raise HTTPException(status_code=500, detail=f"질문 생성 실패: {e}") from e
 
 
-# ✅ 추가: 약점 보강 질문 생성용 보조 함수들
-def _pick_generation_answer_text(transcript: Transcript | None) -> str:
-    if not transcript:
-        return ""
-    if transcript.refined_text and transcript.refined_text.strip():
-        return transcript.refined_text.strip()
-    if transcript.transcript_text and transcript.transcript_text.strip():
-        return transcript.transcript_text.strip()
-    return ""
+# =========================
+# 약점 재검증용 함수들
+# =========================
+
+def _metric_to_competency(metric: str) -> str:
+    mapping = {
+        "RELEVANCE": "질문 맥락 적합성",
+        "COVERAGE": "답변 내용 충실도",
+        "SPECIFICITY": "답변 구체성",
+        "EVIDENCE": "근거 제시력",
+        "CONSISTENCY": "이력서 정합성",
+    }
+    return mapping.get(metric, "면접 답변 역량")
+
+
+def _metric_to_answer_type(metric: str) -> str:
+    if metric in {"SPECIFICITY", "EVIDENCE"}:
+        return "경험형"
+    if metric in {"RELEVANCE", "COVERAGE"}:
+        return "설명형"
+    return "문제해결형"
+
+
+def _metric_to_verification_purpose(metric: str) -> str:
+    mapping = {
+        "RELEVANCE": "질문 의도에 맞는 답변 구조를 다시 검증",
+        "COVERAGE": "질문이 요구한 핵심 요소를 빠짐없이 답하는지 재검증",
+        "SPECIFICITY": "구체적인 사례, 역할, 처리 단계를 말하는지 재검증",
+        "EVIDENCE": "실제 경험과 결과 근거를 제시하는지 재검증",
+        "CONSISTENCY": "이력서 경험과 답변의 정합성을 다시 검증",
+    }
+    return mapping.get(metric, "약점 보완 여부를 다시 검증")
 
 
 def _build_weakness_distribution(weakness_top3: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    weakness_top3 = weakness_top3[:3]
     if not weakness_top3:
         return []
-
-    weakness_top3 = weakness_top3[:3]
 
     if len(weakness_top3) >= 3:
         counts = [2, 2, 1]
@@ -575,13 +598,13 @@ def _build_weakness_distribution(weakness_top3: list[dict[str, Any]]) -> list[di
     else:
         counts = [5]
 
-    distributed = []
+    result = []
     for weakness, count in zip(weakness_top3, counts):
         copied = dict(weakness)
         copied["question_count"] = count
-        distributed.append(copied)
+        result.append(copied)
 
-    return distributed
+    return result
 
 
 def _load_source_session_answer_items(
@@ -590,6 +613,7 @@ def _load_source_session_answer_items(
 ) -> list[dict[str, Any]]:
     rows = (
         db.query(
+            SelectQuestion.sel_id.label("sel_id"),
             SelectQuestion.sel_order_no.label("sel_order_no"),
             Question.qust_question_text.label("question_text"),
             Transcript.transcript_text.label("transcript_text"),
@@ -606,8 +630,7 @@ def _load_source_session_answer_items(
         .all()
     )
 
-    items: list[dict[str, Any]] = []
-
+    result = []
     for row in rows:
         answer_text = ""
         if row.refined_text and str(row.refined_text).strip():
@@ -615,8 +638,9 @@ def _load_source_session_answer_items(
         elif row.transcript_text and str(row.transcript_text).strip():
             answer_text = str(row.transcript_text).strip()
 
-        items.append(
+        result.append(
             {
+                "sel_id": int(row.sel_id),
                 "sel_order_no": int(row.sel_order_no),
                 "question_text": normalize_question_text(row.question_text or ""),
                 "answer_text": answer_text,
@@ -625,15 +649,56 @@ def _load_source_session_answer_items(
                 "overall_comment": row.anal_overall_comment or "",
             }
         )
+    return result
 
-    return items
+
+def _build_tracking_evidence_overrides(
+    source_session_id: int,
+    distributed_weaknesses: list[dict[str, Any]],
+    source_answer_items: list[dict[str, Any]],
+) -> list[list[dict[str, Any]]]:
+    overrides: list[list[dict[str, Any]]] = []
+
+    for weakness in distributed_weaknesses:
+        metric = weakness.get("metric")
+        question_count = int(weakness.get("question_count", 0))
+        candidates = [
+            item for item in source_answer_items
+            if metric in (item.get("weakness_metrics") or [])
+        ]
+        if not candidates:
+            candidates = source_answer_items[:]
+
+        for idx in range(question_count):
+            source_item = candidates[idx % len(candidates)] if candidates else None
+
+            overrides.append(
+                [
+                    {
+                        "type": "WEAKNESS_TRACKING",
+                        "source_session_id": source_session_id,
+                        "source_sel_id": source_item["sel_id"] if source_item else None,
+                        "source_sel_order_no": source_item["sel_order_no"] if source_item else None,
+                        "weakness_rank": weakness.get("rank"),
+                        "weakness_metric": metric,
+                        "weakness_title": weakness.get("title"),
+                        "target_competency": _metric_to_competency(metric),
+                        "verification_purpose": _metric_to_verification_purpose(metric),
+                        "expected_answer_type": _metric_to_answer_type(metric),
+                        "tip": weakness.get("tip"),
+                    }
+                ]
+            )
+
+    return overrides
 
 
-def _create_interview_session_from_selected_questions(
+def _create_weakness_interview_session(
     db: Session,
     user_id: int,
     resume_id: int,
     question_set_id: int,
+    source_session_id: int,
 ) -> InterviewSession:
     selected_questions = (
         db.query(Question)
@@ -646,12 +711,13 @@ def _create_interview_session_from_selected_questions(
     )
 
     if not selected_questions:
-        raise HTTPException(status_code=500, detail="선택된 약점 보강 질문이 없습니다.")
+        raise HTTPException(status_code=500, detail="선택된 약점 재검증 질문이 없습니다.")
 
     interview_session = InterviewSession(
         user_id=user_id,
         resume_id=resume_id,
         set_id=question_set_id,
+        source_inter_id=source_session_id,
         inter_status="IN_PROGRESS",
     )
     db.add(interview_session)
@@ -671,7 +737,7 @@ def _create_interview_session_from_selected_questions(
     return interview_session
 
 
-# ✅ 추가: source session 기준 약점 보강 질문 5개 생성 + 새 weakness session 생성
+# 1차 세션 기준 약점 재검증 질문 5개 생성
 def generate_weakness_questions_for_session(
     db: Session,
     source_session_id: int,
@@ -686,7 +752,10 @@ def generate_weakness_questions_for_session(
         raise HTTPException(status_code=404, detail="원본 면접 세션을 찾을 수 없습니다.")
 
     if source_session.inter_status != "DONE":
-        raise HTTPException(status_code=409, detail="면접 분석 완료 후에만 약점 보강 질문을 생성할 수 있습니다.")
+        raise HTTPException(status_code=409, detail="면접 분석 완료 후에만 약점 재검증 질문을 생성할 수 있습니다.")
+
+    if not source_session.question_set or source_session.question_set.set_purpose != "DEFAULT":
+        raise HTTPException(status_code=409, detail="기본 면접 세션에서만 약점 재검증 질문을 생성할 수 있습니다.")
 
     resume_context = get_resume_question_context(db, source_session.resume_id)
     classification = resume_context["classification"]
@@ -699,7 +768,7 @@ def generate_weakness_questions_for_session(
         top_k=3,
     )
     if not weakness_top3:
-        raise HTTPException(status_code=409, detail="보강이 필요한 약점 데이터가 없습니다.")
+        raise HTTPException(status_code=409, detail="재검증할 약점 데이터가 없습니다.")
 
     distributed_weaknesses = _build_weakness_distribution(weakness_top3)
     source_answer_items = _load_source_session_answer_items(db, source_session_id)
@@ -728,7 +797,13 @@ def generate_weakness_questions_for_session(
         )
 
         if len(llm_result.questions) != 5:
-            raise RuntimeError(f"약점 보강 질문 수가 5개가 아닙니다. (현재 {len(llm_result.questions)}개)")
+            raise RuntimeError(f"약점 재검증 질문 수가 5개가 아닙니다. (현재 {len(llm_result.questions)}개)")
+
+        evidence_overrides = _build_tracking_evidence_overrides(
+            source_session_id=source_session_id,
+            distributed_weaknesses=distributed_weaknesses,
+            source_answer_items=source_answer_items,
+        )
 
         save_llm_run_success(
             db=db,
@@ -737,19 +812,21 @@ def generate_weakness_questions_for_session(
             prompt_version=PROMPT_VERSION_QUESTION_WEAKNESS_GENERATE,
         )
 
-        # ✅ 변경: 약점 질문은 바로 selected=1 저장
+        # 약점 질문은 필터 없이 바로 선택 저장
         save_question_candidates(
             db=db,
             set_id=question_set.set_id,
             items=llm_result.questions,
             selected=1,
+            evidence_overrides=evidence_overrides,
         )
 
-        weakness_session = _create_interview_session_from_selected_questions(
+        weakness_session = _create_weakness_interview_session(
             db=db,
             user_id=source_session.user_id,
             resume_id=source_session.resume_id,
             question_set_id=question_set.set_id,
+            source_session_id=source_session_id,
         )
 
         question_set = (
@@ -793,10 +870,10 @@ def generate_weakness_questions_for_session(
             question_set.set_status = "FAILED"
             db.commit()
 
-        raise HTTPException(status_code=500, detail=f"약점 보강 질문 생성 실패: {e}") from e
+        raise HTTPException(status_code=500, detail=f"약점 재검증 질문 생성 실패: {e}") from e
 
 
-# ✅ 변경: purpose 필터 추가
+# purpose 분리
 def get_latest_completed_question_set(
     db: Session,
     resume_id: int,
@@ -814,7 +891,7 @@ def get_latest_completed_question_set(
     )
 
 
-# ✅ 변경: DEFAULT / WEAKNESS 구분해서 조회
+# purpose 기준 조회
 def ensure_questions_generated_for_resume(
     db: Session,
     resume_id: int,

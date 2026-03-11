@@ -1,0 +1,139 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}개선 추적 상세 - 말해뭐해{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="/static/css/weakness/report_detail.css">
+{% endblock %}
+
+{% block content %}
+<div class="report-detail-wrapper">
+    <div class="container">
+        <div class="page-header">
+            <h2 class="page-title">개선 추적 상세</h2>
+            <p class="page-desc">{{ detail.target_title }} 재검증 결과를 1차와 2차로 비교합니다.</p>
+        </div>
+
+        <section class="hero-card">
+            <div class="hero-top">
+                <span class="hero-badge">보강 Q{{ detail.sel_order_no }}</span>
+                <span class="hero-status">{{ detail.status }}</span>
+            </div>
+
+            <h3 class="hero-question">{{ detail.question_text }}</h3>
+            <p class="hero-purpose">{{ detail.verification_purpose }}</p>
+        </section>
+
+        <section class="compare-score-section">
+            <div class="score-card">
+                <div class="score-label">1차</div>
+                <div class="score-value">{{ detail.before_score }}</div>
+                {% if detail.source_sel_order_no %}
+                <div class="score-sub">연결 질문 Q{{ detail.source_sel_order_no }}</div>
+                {% endif %}
+            </div>
+
+            <div class="score-arrow">→</div>
+
+            <div class="score-card">
+                <div class="score-label">2차</div>
+                <div class="score-value">{{ detail.after_score }}</div>
+                <div class="score-sub">{{ detail.target_label }}</div>
+            </div>
+
+            <div class="delta-card {% if detail.delta >= 0 %}plus{% else %}minus{% endif %}">
+                <div class="delta-label">변화량</div>
+                <div class="delta-value">
+                    {% if detail.delta >= 0 %}+{% endif %}{{ detail.delta }}
+                </div>
+            </div>
+        </section>
+
+        <section class="section-block">
+            <h3 class="section-title">연결된 1차 질문</h3>
+            <div class="info-card">
+                {% if detail.source_question_text %}
+                    {{ detail.source_question_text }}
+                {% else %}
+                    연결된 1차 질문 정보가 없습니다.
+                {% endif %}
+            </div>
+        </section>
+
+        <section class="section-block two-col">
+            <div class="content-card">
+                <h3 class="section-title">1차 답변 요약</h3>
+                <p class="content-text">{{ detail.before_answer_summary }}</p>
+                {% if detail.before_reason %}
+                <div class="reason-box">
+                    <span class="reason-label">1차 해석</span>
+                    <p>{{ detail.before_reason }}</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="content-card">
+                <h3 class="section-title">2차 답변 요약</h3>
+                <p class="content-text">{{ detail.after_answer_summary }}</p>
+                {% if detail.after_reason %}
+                <div class="reason-box">
+                    <span class="reason-label">2차 해석</span>
+                    <p>{{ detail.after_reason }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </section>
+
+        <section class="section-block">
+            <h3 class="section-title">핵심 차이점</h3>
+            <div class="info-card strong">{{ detail.key_difference }}</div>
+        </section>
+
+        <section class="section-block">
+            <h3 class="section-title">Before / After 지표 비교</h3>
+            <div class="table-wrap">
+                <table class="metric-table">
+                    <thead>
+                        <tr>
+                            <th>지표</th>
+                            <th>1차</th>
+                            <th>2차</th>
+                            <th>변화</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in detail.metric_rows %}
+                        <tr>
+                            <td>{{ row.label }}</td>
+                            <td>{{ row.before_score }}</td>
+                            <td>{{ row.after_score }}</td>
+                            <td class="{% if row.delta >= 0 %}plus{% else %}minus{% endif %}">
+                                {% if row.delta >= 0 %}+{% endif %}{{ row.delta }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="section-block">
+            <h3 class="section-title">남은 보완점</h3>
+            <div class="guide-list">
+                {% if detail.remaining_points %}
+                    {% for point in detail.remaining_points %}
+                    <div class="guide-item">{{ loop.index }}. {{ point }}</div>
+                    {% endfor %}
+                {% else %}
+                    <div class="guide-item">추가 보완점이 크게 감지되지 않았습니다.</div>
+                {% endif %}
+            </div>
+        </section>
+
+        <div class="bottom-action">
+            <a href="/interviews/{{ session_id }}/weakness/report" class="btn-secondary">리포트로 돌아가기</a>
+            <a href="/interviews/{{ session_id }}/weakness" class="btn-primary">보강 질문 목록</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

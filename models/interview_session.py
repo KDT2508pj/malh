@@ -21,6 +21,14 @@ class InterviewSession(Base):
         ForeignKey("question_set.set_id", ondelete="CASCADE"),
         nullable=False,
     )
+
+    source_inter_id = Column(
+        Integer,
+        ForeignKey("interview_session.inter_id", ondelete="SET NULL"),
+        nullable=True,
+        comment="WEAKNESS 세션이 어떤 원본 면접 세션에서 생성되었는지",
+    )
+
     inter_status = Column(Enum("IN_PROGRESS", "DONE"), nullable=False)
     inter_started_at = Column(DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP"))
     inter_finished_at = Column(DateTime, nullable=True)
@@ -34,3 +42,17 @@ class InterviewSession(Base):
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
+
+    source_session = relationship(
+        "InterviewSession",
+        remote_side=[inter_id],
+        foreign_keys=[source_inter_id],
+        back_populates="reinforcement_sessions",
+    )
+    reinforcement_sessions = relationship(
+        "InterviewSession",
+        foreign_keys=[source_inter_id],
+        back_populates="source_session",
+    )
+
+    
