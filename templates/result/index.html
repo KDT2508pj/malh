@@ -93,9 +93,7 @@
                                     </div>
                                 </div>
 
-                                <span class="expand-indicator" aria-hidden="true">
-                                    상세 보기
-                                </span>
+                                <span class="expand-indicator" aria-hidden="true"></span>
                             </button>
 
                             <div class="head-actions">
@@ -110,7 +108,12 @@
                             class="card-expand hidden"
                             data-expand-body
                         >
-                            <div class="summary-cards">
+                            <div class="result-loading-state hidden" data-card-loading>
+                                <div class="result-loading-spinner" aria-hidden="true"></div>
+                                <p class="result-loading-text">피드백을 생성하고 있습니다.</p>
+                            </div>
+
+                            <div class="summary-cards hidden" data-card-content>
                                 <section class="summary-card">
                                     <div class="card-head">
                                         <h3 class="card-title">발화 피드백</h3>
@@ -152,72 +155,42 @@
                                         질문 적합성, 근거, 구체성, 일관성 지표를 기반으로 한 컨텍스트 피드백 영역입니다.
                                     </p>
 
-                                    <div class="placeholder-box context-placeholder-box">
+                                    <div class="placeholder-box context-placeholder-box context-feedback-box">
                                         {% if item.context_feedback %}
-                                            <div class="context-simple">
-                                                <div class="context-group">
-                                                    <div class="context-score-row">
-                                                        <strong class="context-label">종합 점수</strong>
-                                                        <span class="context-score">{{ item.context_feedback.overall_score }}점</span>
-                                                    </div>
-
-                                                    <div class="context-summary-row">
-                                                        <strong class="context-label">한줄 요약</strong>
-                                                        <p>{{ item.context_feedback.overall_comment or "종합 요약이 없습니다." }}</p>
-                                                    </div>
-                                                </div>
-
-                                                <div class="context-group">
-                                                    <strong class="context-label">세부 진단</strong>
-                                                    <ul class="context-list">
-                                                        {% for reason in item.context_feedback.reason_rows %}
-                                                        <li>
-                                                            <strong>{{ reason.label }}</strong>
-                                                            <span>{{ reason.text or "내용 없음" }}</span>
-                                                        </li>
-                                                        {% endfor %}
-                                                    </ul>
-                                                </div>
-
-                                                <div class="context-group">
-                                                    <strong class="context-label">잘한 점</strong>
-                                                    {% if item.context_feedback.good_points %}
-                                                    <ul class="context-list">
-                                                        {% for point in item.context_feedback.good_points %}
-                                                        <li>
-                                                            <strong>{{ point.title }}</strong>
-                                                            <span>{{ point.detail }}</span>
-                                                        </li>
-                                                        {% endfor %}
-                                                    </ul>
-                                                    {% else %}
-                                                    <p>잘한 점 데이터가 없습니다.</p>
-                                                    {% endif %}
-                                                </div>
-
-                                                <div class="context-group">
-                                                    <strong class="context-label">개선 포인트</strong>
-                                                    {% if item.context_feedback.improvement_points %}
-                                                    <ul class="context-list">
-                                                        {% for point in item.context_feedback.improvement_points %}
-                                                        <li>
-                                                            <strong>{{ point.title }}</strong>
-                                                            <span>{{ point.detail }}</span>
-                                                        </li>
-                                                        {% endfor %}
-                                                    </ul>
-                                                    {% else %}
-                                                    <p>개선 포인트 데이터가 없습니다.</p>
-                                                    {% endif %}
-                                                </div>
-
-                                                <div class="context-group context-group-last">
-                                                    <strong class="context-label">추천 답변 예시</strong>
-                                                    <div class="context-answer-text">
-                                                        {{ item.context_feedback.revised_answer or "추천 답변 예시가 없습니다." }}
-                                                    </div>
-                                                </div>
-                                            </div>
+                                            <ul class="context-list context-bullet-list">
+                                                <li>
+                                                    종합 점수는 {{ item.context_feedback.overall_score }}점입니다.
+                                                </li>
+                                                <li>
+                                                    {{ item.context_feedback.overall_comment or "종합 요약이 없습니다." }}
+                                                </li>
+                                                {% for reason in item.context_feedback.reason_rows %}
+                                                <li>
+                                                    {{ reason.label }}은 {{ reason.text or "내용 없음" }}
+                                                </li>
+                                                {% endfor %}
+                                                {% if item.context_feedback.good_points %}
+                                                {% for point in item.context_feedback.good_points %}
+                                                <li>
+                                                    잘한 점은 {{ point.title }}로, {{ point.detail }}
+                                                </li>
+                                                {% endfor %}
+                                                {% else %}
+                                                <li>잘한 점 데이터가 없습니다.</li>
+                                                {% endif %}
+                                                {% if item.context_feedback.improvement_points %}
+                                                {% for point in item.context_feedback.improvement_points %}
+                                                <li>
+                                                    개선 포인트는 {{ point.title }}로, {{ point.detail }}
+                                                </li>
+                                                {% endfor %}
+                                                {% else %}
+                                                <li>개선 포인트 데이터가 없습니다.</li>
+                                                {% endif %}
+                                                <li>
+                                                    추천 답변 예시는 {{ item.context_feedback.revised_answer or "추천 답변 예시가 없습니다." }}
+                                                </li>
+                                            </ul>
                                         {% else %}
                                             컨텍스트 분석 데이터가 아직 없습니다.
                                         {% endif %}

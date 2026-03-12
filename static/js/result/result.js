@@ -1,5 +1,3 @@
-
-
 $(function () {
     function setExpanded($card, expanded) {
         const $toggle = $card.find("[data-toggle-card]");
@@ -9,36 +7,39 @@ $(function () {
         $body.toggleClass("hidden", !expanded);
     }
 
-    async function streamToBox(url, formData, $status, $output) {
-        $status.removeClass("ready").text("생성 중..");
+    function setCardLoading($card, loading) {
+        const $loading = $card.find("[data-card-loading]");
+        const $content = $card.find("[data-card-content]");
+        $loading.toggleClass("hidden", !loading);
+        $content.toggleClass("hidden", loading);
+    }
+
+    function buildSpeechFeedbackText(payload) {
+        const report = String(payload.report_md || "").trim();
+        const coaching = String(payload.coaching_md || "").trim();
+
+        if (report && coaching) {
+            return `${report}\n\n${coaching}`;
+        }
+        return report || coaching || "발화 피드백 결과가 비어 있습니다.";
+    }
+
+    async function fetchSpeechFeedback(url, formData, $status, $output) {
+        $status.removeClass("ready").text("생성 중");
         $output.text("");
 
         const response = await fetch(url, {
             method: "POST",
             body: formData,
         });
+
+        const data = await response.json().catch(() => null);
         if (!response.ok) {
-            const text = await response.text();
-            throw new Error(text || "피드백 요청에 실패했습니다.");
-        }
-        if (!response.body) {
-            throw new Error("스트리밍 응답을 받을 수 없습니다.");
+            const message = data && data.detail ? data.detail : "발화 피드백 요청에 실패했습니다.";
+            throw new Error(message);
         }
 
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder("utf-8");
-        let fullText = "";
-
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) {
-                break;
-            }
-            const chunk = decoder.decode(value, { stream: true });
-            fullText += chunk;
-            $output.text(fullText);
-        }
-
+        $output.text(buildSpeechFeedbackText(data || {}));
         $status.addClass("ready").text("완료");
     }
 
@@ -56,34 +57,35 @@ $(function () {
         }
 
         $card.data("speechLoading", true);
+        setCardLoading($card, true);
 
         const formData = new FormData();
         formData.append("force", force ? "1" : "0");
 
         try {
             $status.prop("disabled", true);
-
-            await streamToBox(
-                `/interviews/${sessionId}/questions/${selId}/speech-feedback/stream`,
+            await fetchSpeechFeedback(
+                `/interviews/${sessionId}/questions/${selId}/speech-feedback`,
                 formData,
                 $status,
                 $output,
             );
-
             $card.data("speechLoaded", true);
         } catch (error) {
             $status.removeClass("ready").text("오류");
             $output.text(error.message || "발화 피드백 생성에 실패했습니다.");
         } finally {
+            setCardLoading($card, false);
             $status.prop("disabled", false);
             $card.data("speechLoading", false);
         }
     }
 
     function triggerCardFeedback($card) {
-
         if (!$card.data("speechLoaded")) {
             void runSpeechFeedback($card, false);
+        } else {
+            setCardLoading($card, false);
         }
     }
 
@@ -103,6 +105,7 @@ $(function () {
             });
 
             setExpanded($card, false);
+            setCardLoading($card, false);
 
             $toggle.on("click", function () {
                 const isExpanded = $toggle.attr("aria-expanded") === "true";

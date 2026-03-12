@@ -3,6 +3,7 @@
 {% block title %}이력서 피드백 - 말해뭐해{% endblock %}
 
 {% block head %}
+<link rel="stylesheet" href="/static/css/interview/submit_loading.css">
 <link rel="stylesheet" href="/static/css/resume/recommend.css">
 <style>
     .compatibility-warning { display: none; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid rgba(0,0,0,0.1); font-size: 0.95em; }
@@ -34,12 +35,16 @@
             <button type="button" class="analyze-btn" onclick="startAnalysis()">분석 시작하기</button>
         </div>
 
-        <div id="loadingArea" class="content-card" style="display: none;">
-            <div class="loading-container">
+        <div id="loadingArea" class="submit-loading-wrapper" style="display: none;">
+            <div class="loading-card">
                 <h3 class="loading-title">분석 진행 중</h3>
-                <p class="loading-desc">데이터 정합성 검증 및 분석을 진행하고 있습니다.</p>
-                <div class="loading-track">
-                    <div class="loading-indeterminate"></div>
+                <p class="loading-desc" id="loadingMessage">데이터 정합성 검증 및 분석을 진행하고 있습니다.</p>
+                <div class="progress-track">
+                    <div id="loadingProgressBar" class="progress-fill"></div>
+                </div>
+                <div class="progress-meta">
+                    <span id="loadingPercent">0%</span>
+                    <span id="loadingCount">분석 중</span>
                 </div>
             </div>
         </div>
