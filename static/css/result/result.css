@@ -389,6 +389,44 @@
     border-top: 1px solid #edf0f4;
 }
 
+.result-loading-state {
+    min-height: 220px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    border: 1px dashed #c5d3e8;
+    border-radius: 16px;
+    background: linear-gradient(180deg, #f8fbff 0%, #f3f8ff 100%);
+}
+
+.result-loading-spinner {
+    width: 34px;
+    height: 34px;
+    border: 3px solid #d7e5f7;
+    border-top-color: var(--primary-navy);
+    border-radius: 50%;
+    animation: result-spin 0.9s linear infinite;
+}
+
+.result-loading-text {
+    margin: 0;
+    color: var(--primary-navy);
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.5;
+}
+
+@keyframes result-spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
 .summary-cards {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -491,32 +529,49 @@
     gap: 14px;
 }
 
-.context-feedback-section {
-    padding-bottom: 14px;
-    border-bottom: 1px dashed #d6e0ec;
+.context-feedback-box {
+    border: 1px dashed #c5d3e8;
+    background: #f8fbff;
+    border-radius: 12px;
+    white-space: normal;
 }
 
-.context-feedback-section:last-child {
+.context-simple {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.context-group {
+    padding-bottom: 14px;
+    border-bottom: 1px dashed #d6e0ec;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.context-group:last-child,
+.context-group.context-group-last {
     padding-bottom: 0;
     border-bottom: 0;
 }
 
+.context-score-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.context-label,
 .context-feedback-section strong {
-    display: inline-block;
-    margin-bottom: 8px;
     color: var(--primary-navy);
     font-size: 14px;
     font-weight: 800;
     line-height: 1.4;
 }
 
-.context-feedback-section p {
-    margin: 0;
-    color: var(--result-text-body);
-    font-size: 14px;
-    line-height: 1.7;
-}
-
+.context-score,
 .context-feedback-section:first-child p {
     font-size: 28px;
     font-weight: 800;
@@ -524,7 +579,19 @@
     color: var(--primary-navy);
 }
 
-.context-feedback-section ul {
+.context-summary-row p,
+.context-feedback-section p,
+.context-feedback-section li span,
+.context-answer-text,
+.context-list li {
+    margin: 0;
+    color: var(--result-text-body);
+    font-size: 14px;
+    line-height: 1.7;
+}
+
+.context-feedback-section ul,
+.context-list {
     margin: 0;
     padding: 0;
     list-style: none;
@@ -533,14 +600,20 @@
     gap: 10px;
 }
 
-.context-feedback-section li {
+.context-feedback-section li,
+.context-list li {
     margin: 0;
     color: var(--result-text-body);
     font-size: 14px;
     line-height: 1.7;
+    padding: 8px 10px;
+    border: 1px solid #e5ebf4;
+    border-radius: 10px;
+    background: #fff;
 }
 
-.context-feedback-section li strong {
+.context-feedback-section li strong,
+.context-list li strong {
     display: block;
     margin-bottom: 4px;
     color: var(--primary-navy);
@@ -549,20 +622,44 @@
     line-height: 1.5;
 }
 
-.context-feedback-section li span {
-    display: block;
+.context-bullet-list {
+    gap: 0;
+    white-space: normal;
+}
+
+.context-bullet-list li {
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    white-space: normal;
+}
+
+.context-bullet-list li::before {
+    content: "- ";
+    color: var(--primary-navy);
+    font-weight: 800;
+}
+
+.context-bullet-list li strong,
+.context-bullet-list .context-list-item-title {
+    display: inline;
+    margin: 0;
+    font-size: inherit;
+    font-weight: inherit;
+    color: inherit;
+    line-height: inherit;
+}
+
+.context-answer-text {
+    margin: 0;
+    padding: 10px;
+    border: 1px solid #e5ebf4;
+    border-radius: 10px;
+    background: #fff;
     color: var(--result-text-body);
-}
-
-.context-feedback-section:first-child strong + p {
-    margin-bottom: 12px;
-}
-
-.context-feedback-section:first-child p + strong {
-    margin-top: 6px;
-}
-
-.context-feedback-section:last-child p {
+    font-size: 14px;
+    line-height: 1.7;
     white-space: pre-wrap;
 }
 
@@ -742,6 +839,7 @@
         font-size: 14px;
     }
 
+    .context-score,
     .context-feedback-section:first-child p {
         font-size: 24px;
     }
@@ -781,6 +879,7 @@
         font-size: 12px;
     }
 
+    .context-score,
     .context-feedback-section:first-child p {
         font-size: 22px;
     }
