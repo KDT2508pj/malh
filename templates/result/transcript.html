@@ -262,12 +262,12 @@
                 <div class="section-card">
                     <div class="card-header header-length"><span>답변 길이 평가</span></div>
                     <div class="length-status-box help-card-trigger" data-help-key="length_adequacy" tabindex="0" role="button" aria-label="답변 길이 적절성 도움말 보기">
-                        {% if transcript_item.speech_score.metrics.length_adequacy_score >= 70 %}
-                        <span class="status-text">적정 범위</span>
-                        {% elif transcript_item.speech_score.metrics.length_adequacy_score >= 40 %}
-                        <span class="status-text">다소 짧거나 김</span>
+                        {% if transcript_item.speech_score.metrics.duration_sec < 70 %}
+                        <span class="status-text">다소 짧음</span>
+                        {% elif transcript_item.speech_score.metrics.duration_sec > 110 %}
+                        <span class="status-text">다소 김</span>
                         {% else %}
-                        <span class="status-text">범위 이탈</span>
+                        <span class="status-text">적정 길이</span>
                         {% endif %}
                     </div>
                     <ul class="length-detail-list">
