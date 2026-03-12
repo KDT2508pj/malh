@@ -37,7 +37,7 @@ async function pollProgress() {
 
     const tick = async () => {
         try {
-            const response = await fetch(`/api/interviews/${sessionId}/submit-analysis/progress`);
+            const response = await fetch(`/interviews/${sessionId}/submit-analysis/progress`);
             if (!response.ok) {
                 const data = await response.json().catch(() => ({}));
                 throw new Error(data.detail || "진행 조회에 실패했습니다.");

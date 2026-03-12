@@ -22,10 +22,9 @@ function goToWeaknessDetail(id, isRecorded = false) {
 function completeReinforcement() {
     const sessionId = getSessionIdFromPath();
     if (!sessionId) return;
-
-    if (confirm("보강 연습 결과를 분석해 개선 추적 리포트를 확인하시겠습니까?")) {
-        $(location).attr("href", `/interviews/${sessionId}/weakness/report-loading`);
-    }
+    
+    $(location).attr("href", `/interviews/${sessionId}/weakness/report-loading`);
+    
 }
 
 $(function () {

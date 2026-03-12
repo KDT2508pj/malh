@@ -1,96 +1,113 @@
-/* Result Index Page Specific Styles */
-
 .result-container-wrapper {
+    --result-bg-soft: #f8fbff;
+    --result-bg-section: linear-gradient(180deg, #f7faff 0%, #ffffff 100%);
+    --result-border: #dbe6f4;
+    --result-border-soft: #e7edf5;
+    --result-text-body: #44546b;
+    --result-text-muted: #66758a;
+    --result-shadow-sm: 0 6px 18px rgba(15, 53, 104, 0.05);
+    --result-shadow-md: 0 10px 28px rgba(15, 53, 104, 0.08);
+    --result-shadow-lg: 0 14px 36px rgba(15, 53, 104, 0.12);
+
     flex: 1;
     display: flex;
     justify-content: center;
-    padding: 60px 20px;
     width: 100%;
+    padding: 48px 20px 64px;
 }
 
 .container {
     width: 100%;
-    max-width: 1170px;
+    max-width: 1080px;
 }
 
+/* Page Header */
 .page-header {
-    margin-bottom: 40px;
+    margin-bottom: 24px;
     text-align: center;
 }
 
 .page-title {
-    font-size: 32px;
+    margin: 0;
+    font-size: 30px;
     font-weight: 800;
+    line-height: 1.3;
+    letter-spacing: -0.02em;
     color: var(--primary-navy);
-    margin-bottom: 10px;
 }
 
-.page-desc {
-    font-size: 16px;
-    color: var(--text-sub);
+/* Common Section */
+.weakness-summary-section,
+.result-list-section {
+    padding: 24px;
+    border: 1px solid var(--result-border);
+    border-radius: 20px;
+    background: var(--result-bg-section);
+    box-shadow: var(--result-shadow-md);
 }
 
-.page-guide {
-    margin: 14px auto 0;
-    width: fit-content;
-    font-size: 19px;
-    font-weight: 500;
-    color: #173f74;
-    background: #eef5ff;
-    border: 1px solid #b6c8e2;
-    border-radius: 999px;
-    padding: 10px 18px;
-    box-shadow: 0 4px 14px rgba(23, 63, 116, 0.12);
-}
-
-/* [Weakness TOP 3] */
 .weakness-summary-section {
-    margin-bottom: 26px;
-    background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
-    border: 1px solid #dbe6f4;
-    border-radius: 22px;
-    padding: 30px;
-    box-shadow: 0 8px 24px rgba(15, 53, 104, 0.07);
+    margin-bottom: 24px;
 }
 
-.weakness-summary-head {
+.result-list-section {
+    margin-bottom: 24px;
+    background: linear-gradient(180deg, #f4f8ff 0%, #ffffff 100%);
+    border-color: #d9e4f3;
+}
+
+.weakness-summary-head,
+.result-list-head {
     display: flex;
-    justify-content: space-between;
     align-items: flex-start;
+    justify-content: space-between;
     gap: 18px;
-    margin-bottom: 22px;
+    margin-bottom: 18px;
 }
 
 .weakness-summary-title {
-    font-size: 26px;
+    margin: 0 0 8px;
+    font-size: 23px;
     font-weight: 800;
+    line-height: 1.35;
     color: var(--primary-navy);
-    margin-bottom: 8px;
 }
 
 .weakness-summary-desc {
-    font-size: 16px;
-    color: var(--text-sub);
+    margin: 0;
+    font-size: 15px;
     line-height: 1.6;
+    color: var(--text-sub);
 }
 
+.result-list-title {
+    margin: 0;
+}
+
+/* Weakness TOP 3 */
 .weakness-top3-list {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 16px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
 }
 
 .weakness-rank-card {
     display: flex;
     flex-direction: column;
-    gap: 16px;
     align-items: flex-start;
+    gap: 12px;
+    min-height: 100%;
+    padding: 18px;
+    border: 1px solid var(--result-border-soft);
+    border-radius: 16px;
     background: #fff;
-    border: 1px solid #e7edf5;
-    border-radius: 18px;
-    padding: 22px;
-    box-shadow: 0 6px 18px rgba(15, 53, 104, 0.05);
-    height: 100%;
+    box-shadow: var(--result-shadow-sm);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.weakness-rank-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--result-shadow-md);
 }
 
 .weakness-rank-card.rank-1 {
@@ -108,17 +125,17 @@
 
 .weakness-rank-badge {
     flex-shrink: 0;
-    width: 52px;
-    height: 52px;
-    border-radius: 50%;
-    background: var(--primary-navy);
-    color: #fff;
-    font-size: 24px;
-    font-weight: 800;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--primary-navy);
     box-shadow: 0 8px 18px rgba(15, 53, 104, 0.18);
+    color: #fff;
+    font-size: 18px;
+    font-weight: 800;
 }
 
 .rank-1 .weakness-rank-badge {
@@ -135,193 +152,223 @@
 
 .weakness-rank-content {
     display: flex;
-    flex-direction: column;
     flex: 1;
-    min-width: 0;
+    flex-direction: column;
     width: 100%;
+    min-width: 0;
 }
 
 .weakness-rank-top {
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    justify-content: space-between;
     gap: 12px;
-    margin-bottom: 10px;
     flex-wrap: wrap;
+    margin-bottom: 8px;
 }
 
 .weakness-rank-title {
-    font-size: 22px;
+    margin: 0;
+    font-size: 18px;
     font-weight: 800;
+    line-height: 1.45;
     color: var(--text-main);
-    line-height: 1.4;
+    word-break: keep-all;
 }
 
 .weakness-rank-summary {
-    font-size: 16px;
-    color: #44546b;
-    line-height: 1.7;
-    margin-bottom: 14px;
+    margin: 0 0 12px;
+    font-size: 14px;
+    line-height: 1.65;
+    color: var(--result-text-body);
 }
 
 .weakness-related-row {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: 8px;
-    margin-bottom: 14px;
-    min-height: 72px;
+    gap: 6px;
+    margin-bottom: 12px;
 }
 
 .weakness-related-label {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 700;
     color: var(--primary-navy);
-    padding-top: 0;
 }
 
 .weakness-related-tags {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-    align-content: flex-start;
 }
 
 .weakness-related-tag {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: #eef5ff;
-    color: #173f74;
+    padding: 6px 10px;
     border: 1px solid #c9d9ee;
     border-radius: 999px;
-    padding: 7px 12px;
-    font-size: 14px;
+    background: #eef5ff;
+    color: #173f74;
+    font-size: 13px;
     font-weight: 700;
+    line-height: 1.2;
 }
 
 .weakness-tip-box {
-    border-radius: 14px;
-    background: #f7fafc;
-    border: 1px solid #e2ebf3;
-    padding: 14px 16px;
     width: 100%;
     margin-top: auto;
+    padding: 12px 14px;
+    border: 1px solid #e2ebf3;
+    border-radius: 12px;
+    background: #f7fafc;
 }
 
 .weakness-tip-label {
     display: inline-block;
-    font-size: 14px;
-    font-weight: 800;
-    color: var(--primary-orange);
     margin-bottom: 6px;
+    color: var(--primary-orange);
+    font-size: 13px;
+    font-weight: 800;
 }
 
 .weakness-tip-text {
-    font-size: 15px;
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.6;
     color: #4c5b70;
-    line-height: 1.65;
 }
 
 .weakness-empty-box {
+    padding: 20px;
     border: 1px dashed #c7d5e8;
-    border-radius: 16px;
+    border-radius: 14px;
     background: #f8fbff;
     color: #4b5d75;
-    font-size: 16px;
+    font-size: 15px;
     line-height: 1.7;
-    padding: 22px;
     text-align: center;
 }
 
-/* [Question Result List] */
-.result-list-section {
-    margin-bottom: 26px;
-    background: linear-gradient(180deg, #f4f8ff 0%, #ffffff 100%);
-    border: 1px solid #d9e4f3;
-    border-radius: 22px;
-    padding: 30px;
-    box-shadow: 0 8px 24px rgba(15, 53, 104, 0.07);
-}
-
-.result-list-head {
-    margin-bottom: 22px;
-    display: flex;
-    justify-content: flex-start;
-}
-
-.result-list-title {
-    margin: 0;
-}
-
-/* [Result Card] */
+/* Result List */
 .result-list {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 14px;
 }
 
 .result-card {
+    padding: 24px;
+    border: 1px solid #e7edf4;
+    border-radius: 16px;
     background: #fff;
-    border-radius: 18px;
-    padding: 40px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
-    border: 1px solid #eee;
-    transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease,
+        border-color 0.2s ease,
+        background-color 0.2s ease;
 }
 
 .result-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
-    border-color: var(--primary-orange);
+    transform: translateY(-2px);
+    border-color: #f0b263;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.07);
 }
 
 .result-card.expanded {
     border-color: var(--primary-navy);
+    box-shadow: 0 12px 30px rgba(15, 53, 104, 0.10);
+}
+
+.result-card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
 }
 
 .result-card-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    flex: 1;
+    min-width: 0;
     width: 100%;
+    padding: 0;
     border: 0;
     background: transparent;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
     text-align: left;
     cursor: pointer;
 }
 
 .card-info {
     flex: 1;
-    padding-right: 20px;
+    min-width: 0;
+    padding-right: 0;
 }
 
 .question-badge {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 10px;
+    padding: 5px 10px;
+    border-radius: 20px;
     background: #f0f7ff;
     color: var(--primary-navy);
-    font-size: 15px;
+    font-size: 13px;
     font-weight: 700;
-    padding: 6px 12px;
-    border-radius: 20px;
-    margin-bottom: 12px;
+    line-height: 1.2;
 }
 
 .question-title {
-    font-size: 23px;
-    font-weight: 700;
+    margin: 0 0 10px;
     color: var(--text-main);
-    margin-bottom: 14px;
+    font-size: 20px;
+    font-weight: 700;
     line-height: 1.45;
+    letter-spacing: -0.01em;
+    word-break: keep-all;
 }
 
 .answer-meta {
-    font-size: 18px;
-    color: var(--text-sub);
     display: flex;
     align-items: center;
-    gap: 8px;
     flex-wrap: wrap;
+    gap: 6px;
+    color: var(--text-sub);
+    font-size: 15px;
+    line-height: 1.5;
+}
+
+.time-icon {
+    font-size: 15px;
+    line-height: 1;
+}
+
+.expand-indicator {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 12px;
+    border: 1px solid #e2eaf4;
+    border-radius: 999px;
+    background: #f7f9fc;
+    color: #627387;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+.result-card.expanded .expand-indicator {
+    background: #eef5ff;
+    border-color: #c8daef;
+    color: var(--primary-navy);
 }
 
 .head-actions {
@@ -329,60 +376,86 @@
     align-items: center;
     gap: 12px;
     flex-shrink: 0;
+    padding-top: 2px;
 }
 
 .hidden {
-    display: none;
+    display: none !important;
 }
 
 .card-expand {
-    margin-top: 22px;
-    padding-top: 22px;
+    margin-top: 18px;
+    padding-top: 18px;
     border-top: 1px solid #edf0f4;
 }
 
 .summary-cards {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 14px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    align-items: start;
 }
 
 .summary-card {
-    background: #fff;
+    padding: 22px;
     border: 1px solid #e9edf3;
     border-radius: 16px;
-    padding: 26px;
+    background: #fff;
     box-shadow: 0 6px 20px rgba(15, 53, 104, 0.06);
+    align-self: start;
 }
 
 .card-head {
     display: flex;
-    justify-content: space-between;
     align-items: flex-start;
+    justify-content: space-between;
     gap: 12px;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
 }
 
 .card-title {
-    font-size: 22px;
-    line-height: 1.4;
+    margin: 0;
     color: var(--primary-navy);
+    font-size: 18px;
     font-weight: 800;
+    line-height: 1.4;
+}
+
+.card-desc {
+    margin: 0 0 12px;
+    color: var(--text-sub);
+    font-size: 14px;
+    line-height: 1.6;
 }
 
 .status-chip {
     flex-shrink: 0;
-    font-size: 14px;
-    font-weight: 700;
-    color: #6a778a;
-    background: #eef2f7;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 32px;
+    padding: 7px 10px;
     border-radius: 999px;
-    padding: 8px 12px;
+    background: #eef2f7;
+    color: #6a778a;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.status-chip.ready {
+    background: #e8f6ee;
+    color: #0f6d3f;
 }
 
 .status-action {
     border: 0;
     cursor: pointer;
+    transition: transform 0.15s ease, opacity 0.2s ease;
+}
+
+.status-action:hover:not(:disabled) {
+    transform: translateY(-1px);
 }
 
 .status-action:disabled {
@@ -390,160 +463,250 @@
     opacity: 0.7;
 }
 
-.status-chip.ready {
-    color: #0f6d3f;
-    background: #e8f6ee;
-}
-
-.card-desc {
-    color: var(--text-sub);
-    line-height: 1.6;
-    margin-bottom: 12px;
-    font-size: 17px;
-}
-
 .placeholder-box {
+    min-height: 180px;
+    padding: 16px;
     border: 1px dashed #c5d3e8;
     border-radius: 12px;
     background: #f8fbff;
-    color: #44546b;
-    font-size: 16px;
-    padding: 16px;
-    min-height: 120px;
+    color: var(--result-text-body);
+    font-size: 14px;
+    line-height: 1.7;
     white-space: pre-wrap;
-    line-height: 1.65;
+    overflow-wrap: break-word;
 }
 
-/* [Buttons] */
-.action-buttons {
+.speech-placeholder-box {
+    min-height: 180px;
+}
+
+.context-placeholder-box {
+    min-height: 180px;
+}
+
+/* Context Feedback - 오른쪽도 왼쪽처럼 한 블럭 안에서 처리 */
+.context-feedback-wrap {
     display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-    margin-top: 14px;
+    flex-direction: column;
+    gap: 14px;
 }
 
-.btn-text,
-.btn-analysis {
-    padding: 14px 24px;
-    border-radius: 10px;
+.context-feedback-section {
+    padding-bottom: 14px;
+    border-bottom: 1px dashed #d6e0ec;
+}
+
+.context-feedback-section:last-child {
+    padding-bottom: 0;
+    border-bottom: 0;
+}
+
+.context-feedback-section strong {
+    display: inline-block;
+    margin-bottom: 8px;
+    color: var(--primary-navy);
+    font-size: 14px;
+    font-weight: 800;
+    line-height: 1.4;
+}
+
+.context-feedback-section p {
+    margin: 0;
+    color: var(--result-text-body);
+    font-size: 14px;
+    line-height: 1.7;
+}
+
+.context-feedback-section:first-child p {
+    font-size: 28px;
+    font-weight: 800;
+    line-height: 1.2;
+    color: var(--primary-navy);
+}
+
+.context-feedback-section ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.context-feedback-section li {
+    margin: 0;
+    color: var(--result-text-body);
+    font-size: 14px;
+    line-height: 1.7;
+}
+
+.context-feedback-section li strong {
+    display: block;
+    margin-bottom: 4px;
+    color: var(--primary-navy);
+    font-size: 14px;
     font-weight: 700;
-    font-size: 16px;
-    cursor: pointer;
-    transition: all 0.2s;
-    text-decoration: none;
+    line-height: 1.5;
+}
+
+.context-feedback-section li span {
+    display: block;
+    color: var(--result-text-body);
+}
+
+.context-feedback-section:first-child strong + p {
+    margin-bottom: 12px;
+}
+
+.context-feedback-section:first-child p + strong {
+    margin-top: 6px;
+}
+
+.context-feedback-section:last-child p {
+    white-space: pre-wrap;
+}
+
+/* Buttons */
+.btn-text,
+.btn-analysis,
+.btn-weakness {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    min-height: 44px;
+    padding: 11px 16px;
+    border-radius: 10px;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.2;
+    cursor: pointer;
+    transition:
+        background-color 0.2s ease,
+        border-color 0.2s ease,
+        color 0.2s ease,
+        transform 0.15s ease,
+        box-shadow 0.2s ease;
 }
 
 .btn-text {
-    background-color: #fff;
-    color: var(--primary-navy);
     border: 1px solid var(--primary-navy);
+    background: #fff;
+    color: var(--primary-navy);
 }
 
 .btn-text:hover {
-    background-color: #f0f7ff;
+    background: #f0f7ff;
+    transform: translateY(-1px);
 }
 
 .btn-analysis {
-    background-color: var(--primary-navy);
-    color: #fff;
     border: 1px solid var(--primary-navy);
+    background: var(--primary-navy);
+    color: #fff;
+    box-shadow: 0 8px 18px rgba(15, 53, 104, 0.14);
+    white-space: nowrap;
 }
 
 .btn-analysis:hover {
-    background-color: #0a254a;
+    background: #0a254a;
     border-color: #0a254a;
+    transform: translateY(-1px);
 }
 
 .btn-weakness {
-    background-color: #fff;
-    color: var(--primary-orange);
     border: 1px solid var(--primary-orange);
-    padding: 14px 24px;
-    border-radius: 10px;
-    font-weight: 700;
-    font-size: 16px;
-    cursor: pointer;
-    transition: all 0.2s;
+    background: #fff;
+    color: var(--primary-orange);
 }
 
 .btn-weakness:hover {
-    background-color: #fff6ef;
+    background: #fff6ef;
+    transform: translateY(-1px);
 }
 
+/* Accessibility */
+.result-card-head:focus-visible,
+.btn-text:focus-visible,
+.btn-analysis:focus-visible,
+.btn-weakness:focus-visible,
+.status-action:focus-visible {
+    outline: 3px solid rgba(36, 99, 235, 0.22);
+    outline-offset: 3px;
+}
+
+/* Bottom Action */
 .page-bottom-action {
     display: flex;
     justify-content: center;
-    margin-top: 26px;
+    margin-top: 24px;
 }
 
-/* [Responsive] */
+/* Responsive */
 @media (max-width: 1024px) {
+    .container {
+        max-width: 100%;
+    }
+
     .weakness-top3-list {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .summary-cards {
+        grid-template-columns: 1fr;
     }
 }
 
 @media (max-width: 768px) {
-    .weakness-summary-section {
-        padding: 22px;
+    .result-container-wrapper {
+        padding: 36px 16px 52px;
     }
 
+    .page-header {
+        margin-bottom: 20px;
+    }
+
+    .page-title {
+        font-size: 27px;
+    }
+
+    .weakness-summary-section,
     .result-list-section {
-        padding: 22px;
-    }
-
-    .weakness-summary-head {
-        margin-bottom: 18px;
-    }
-
-    .result-list-head {
-        margin-bottom: 18px;
+        padding: 20px;
+        border-radius: 18px;
     }
 
     .weakness-summary-title {
-        font-size: 22px;
+        font-size: 21px;
     }
 
     .weakness-summary-desc {
-        font-size: 15px;
-    }
-
-    .result-list-title {
-        width: 100%;
+        font-size: 14px;
     }
 
     .weakness-top3-list {
         grid-template-columns: 1fr;
     }
 
-    .weakness-rank-card {
+    .weakness-rank-card,
+    .result-card,
+    .summary-card {
         padding: 18px;
-        gap: 14px;
     }
 
     .weakness-rank-badge {
-        width: 46px;
-        height: 46px;
-        font-size: 21px;
+        width: 38px;
+        height: 38px;
+        font-size: 17px;
     }
 
     .weakness-rank-title {
-        font-size: 19px;
+        font-size: 17px;
     }
 
-    .weakness-rank-summary {
-        font-size: 15px;
-    }
-
-    .weakness-tip-text {
-        font-size: 14px;
-    }
-
-    .result-card {
-        padding: 24px;
+    .result-card-top {
+        flex-direction: column;
+        align-items: stretch;
     }
 
     .result-card-head {
@@ -554,50 +717,71 @@
 
     .head-actions {
         width: 100%;
-        justify-content: space-between;
+        padding-top: 0;
     }
 
-    .card-info {
-        padding-right: 0;
-    }
-
-    .summary-cards {
-        grid-template-columns: 1fr;
-    }
-
-    .page-guide {
-        font-size: 16px;
-        padding: 8px 14px;
-    }
-
-    .question-title {
-        font-size: 19px;
-    }
-
-    .answer-meta {
-        font-size: 15px;
-    }
-
-    .card-title {
-        font-size: 18px;
-    }
-
-    .card-desc {
-        font-size: 15px;
-    }
-
-    .placeholder-box {
-        font-size: 14px;
-        min-height: 92px;
-    }
-
-    .action-buttons {
+    .btn-analysis,
+    .btn-weakness {
         width: 100%;
     }
 
-    .btn-text,
-    .btn-analysis,
-    .btn-weakness {
-        flex: 1;
+    .question-title {
+        font-size: 18px;
+    }
+
+    .answer-meta {
+        font-size: 14px;
+    }
+
+    .card-title {
+        font-size: 17px;
+    }
+
+    .card-desc,
+    .placeholder-box {
+        font-size: 14px;
+    }
+
+    .context-feedback-section:first-child p {
+        font-size: 24px;
+    }
+}
+
+@media (max-width: 480px) {
+    .page-title {
+        font-size: 24px;
+    }
+
+    .weakness-summary-title {
+        font-size: 19px;
+    }
+
+    .result-card,
+    .summary-card,
+    .weakness-rank-card {
+        border-radius: 14px;
+    }
+
+    .question-badge {
+        font-size: 12px;
+    }
+
+    .question-title {
+        font-size: 17px;
+    }
+
+    .card-head {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .status-chip {
+        min-height: 30px;
+        padding: 6px 10px;
+        font-size: 12px;
+    }
+
+    .context-feedback-section:first-child p {
+        font-size: 22px;
     }
 }

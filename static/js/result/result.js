@@ -1,6 +1,3 @@
-/**
- * result.js - 결과 목록 아코디언 + 카드 펼침 시 자동 LLM 피드백 생성
- */
 
 
 $(function () {
@@ -45,32 +42,37 @@ $(function () {
         $status.addClass("ready").text("완료");
     }
 
-    async function runSpeechFeedback($card) {
+    async function runSpeechFeedback($card, force = true) {
         const $status = $card.find("[data-speech-status]");
         const $output = $card.find("[data-speech-feedback-output]");
         const selId = Number($card.data("sel-id") || 0);
         const sessionId = Number($status.data("session-id") || 0);
+
         if (!sessionId || !selId) {
             return;
         }
         if ($card.data("speechLoading")) {
             return;
         }
+
         $card.data("speechLoading", true);
 
         const formData = new FormData();
-        formData.append("force", "1");
+        formData.append("force", force ? "1" : "0");
 
         try {
             $status.prop("disabled", true);
+
             await streamToBox(
-                `/api/interviews/${sessionId}/questions/${selId}/speech-feedback/stream`,
+                `/interviews/${sessionId}/questions/${selId}/speech-feedback/stream`,
                 formData,
                 $status,
                 $output,
             );
+
+            $card.data("speechLoaded", true);
         } catch (error) {
-            $status.removeClass("ready").text("?오류");
+            $status.removeClass("ready").text("오류");
             $output.text(error.message || "발화 피드백 생성에 실패했습니다.");
         } finally {
             $status.prop("disabled", false);
@@ -79,7 +81,10 @@ $(function () {
     }
 
     function triggerCardFeedback($card) {
-        void runSpeechFeedback($card);
+
+        if (!$card.data("speechLoaded")) {
+            void runSpeechFeedback($card, false);
+        }
     }
 
     function bindAccordion() {
@@ -87,18 +92,23 @@ $(function () {
             const $card = $(this);
             const $toggle = $card.find("[data-toggle-card]");
             const $runButton = $card.find("[data-run-speech-feedback]");
+
             $toggle.find("a, button.btn-analysis").on("click", function (e) {
                 e.stopPropagation();
             });
+
             $runButton.on("click", function (e) {
                 e.stopPropagation();
-                void runSpeechFeedback($card);
+                void runSpeechFeedback($card, true);
             });
+
             setExpanded($card, false);
+
             $toggle.on("click", function () {
                 const isExpanded = $toggle.attr("aria-expanded") === "true";
                 const nextExpanded = !isExpanded;
                 setExpanded($card, nextExpanded);
+
                 if (nextExpanded) {
                     triggerCardFeedback($card);
                 }

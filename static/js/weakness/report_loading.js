@@ -2,7 +2,7 @@ const weaknessReportLoadingContext = window.WEAKNESS_REPORT_LOADING_CONTEXT || {
 const sessionId = Number(weaknessReportLoadingContext.sessionId || 0);
 
 async function startWeaknessReportJob() {
-    const response = await fetch(`/api/interviews/${sessionId}/weakness/report/start`, {
+    const response = await fetch(`/interviews/${sessionId}/weakness/report/start`, {
         method: "POST",
     });
 
@@ -50,7 +50,7 @@ async function pollWeaknessReportProgress() {
 
     const tick = async () => {
         try {
-            const response = await fetch(`/api/interviews/${sessionId}/weakness/report/progress`);
+            const response = await fetch(`/interviews/${sessionId}/weakness/report/progress`);
             if (!response.ok) {
                 const data = await response.json().catch(() => ({}));
                 throw new Error(data.detail || "진행 조회에 실패했습니다.");

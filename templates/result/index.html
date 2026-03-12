@@ -76,21 +76,40 @@
                 {% if result_items %}
                     {% for item in result_items %}
                     <div class="result-card" data-sel-id="{{ item.sel_id }}">
-                        <button type="button" class="result-card-head" data-toggle-card aria-expanded="false">
-                            <div class="card-info">
-                                <span class="question-badge">Q{{ item.sel_order_no }}</span>
-                                <div class="question-title">{{ item.question_text }}</div>
-                                <div class="answer-meta">
-                                    <span class="time-icon">⏱</span>
-                                    답변 길이 <strong>{{ item.duration_sec }}초</strong>
+                        <div class="result-card-top">
+                            <button
+                                type="button"
+                                class="result-card-head"
+                                data-toggle-card
+                                aria-expanded="false"
+                                aria-controls="result-expand-{{ item.sel_id }}"
+                            >
+                                <div class="card-info">
+                                    <span class="question-badge">Q{{ item.sel_order_no }}</span>
+                                    <div class="question-title">{{ item.question_text }}</div>
+                                    <div class="answer-meta">
+                                        <span class="time-icon">⏱</span>
+                                        답변 길이 <strong>{{ item.duration_sec }}초</strong>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="head-actions">
-                                <a href="/interviews/{{ session_id }}/results/{{ item.sel_id }}/text" class="btn-analysis">통합 분석 보기</a>
-                            </div>
-                        </button>
 
-                        <div class="card-expand hidden" data-expand-body>
+                                <span class="expand-indicator" aria-hidden="true">
+                                    상세 보기
+                                </span>
+                            </button>
+
+                            <div class="head-actions">
+                                <a href="/interviews/{{ session_id }}/results/{{ item.sel_id }}/text" class="btn-analysis">
+                                    통합 분석 보기
+                                </a>
+                            </div>
+                        </div>
+
+                        <div
+                            id="result-expand-{{ item.sel_id }}"
+                            class="card-expand hidden"
+                            data-expand-body
+                        >
                             <div class="summary-cards">
                                 <section class="summary-card">
                                     <div class="card-head">
@@ -107,9 +126,11 @@
                                             {% if item.speech_ready %}준비됨{% else %}대기 중{% endif %}
                                         </button>
                                     </div>
+
                                     <p class="card-desc">
                                         발화 속도, 명료도, 구조, 길이 지표를 기반으로 LLM이 발화 피드백을 생성합니다.
                                     </p>
+
                                     <div class="placeholder-box" data-speech-feedback-output>
                                         {% if item.speech_ready %}
                                         카드를 펼치면 발화 피드백이 자동으로 생성됩니다. 다시 생성하려면 상태 버튼을 누르세요.
@@ -123,17 +144,82 @@
                                     <div class="card-head">
                                         <h3 class="card-title">컨텍스트 피드백</h3>
                                         <span class="status-chip{% if item.context_ready %} ready{% endif %}">
-                                            {% if item.context_ready %}준비됨{% else %}연결 예정{% endif %}
+                                            {% if item.context_ready %}준비됨{% else %}대기 중{% endif %}
                                         </span>
                                     </div>
+
                                     <p class="card-desc">
                                         질문 적합성, 근거, 구체성, 일관성 지표를 기반으로 한 컨텍스트 피드백 영역입니다.
                                     </p>
-                                    <div class="placeholder-box">
-                                        {% if item.context_ready %}
-                                        컨텍스트 분석 데이터는 준비되어 있지만, 목록 화면에서는 아직 요약 텍스트를 별도 호출하지 않습니다.
+
+                                    <div class="placeholder-box context-placeholder-box">
+                                        {% if item.context_feedback %}
+                                            <div class="context-simple">
+                                                <div class="context-group">
+                                                    <div class="context-score-row">
+                                                        <strong class="context-label">종합 점수</strong>
+                                                        <span class="context-score">{{ item.context_feedback.overall_score }}점</span>
+                                                    </div>
+
+                                                    <div class="context-summary-row">
+                                                        <strong class="context-label">한줄 요약</strong>
+                                                        <p>{{ item.context_feedback.overall_comment or "종합 요약이 없습니다." }}</p>
+                                                    </div>
+                                                </div>
+
+                                                <div class="context-group">
+                                                    <strong class="context-label">세부 진단</strong>
+                                                    <ul class="context-list">
+                                                        {% for reason in item.context_feedback.reason_rows %}
+                                                        <li>
+                                                            <strong>{{ reason.label }}</strong>
+                                                            <span>{{ reason.text or "내용 없음" }}</span>
+                                                        </li>
+                                                        {% endfor %}
+                                                    </ul>
+                                                </div>
+
+                                                <div class="context-group">
+                                                    <strong class="context-label">잘한 점</strong>
+                                                    {% if item.context_feedback.good_points %}
+                                                    <ul class="context-list">
+                                                        {% for point in item.context_feedback.good_points %}
+                                                        <li>
+                                                            <strong>{{ point.title }}</strong>
+                                                            <span>{{ point.detail }}</span>
+                                                        </li>
+                                                        {% endfor %}
+                                                    </ul>
+                                                    {% else %}
+                                                    <p>잘한 점 데이터가 없습니다.</p>
+                                                    {% endif %}
+                                                </div>
+
+                                                <div class="context-group">
+                                                    <strong class="context-label">개선 포인트</strong>
+                                                    {% if item.context_feedback.improvement_points %}
+                                                    <ul class="context-list">
+                                                        {% for point in item.context_feedback.improvement_points %}
+                                                        <li>
+                                                            <strong>{{ point.title }}</strong>
+                                                            <span>{{ point.detail }}</span>
+                                                        </li>
+                                                        {% endfor %}
+                                                    </ul>
+                                                    {% else %}
+                                                    <p>개선 포인트 데이터가 없습니다.</p>
+                                                    {% endif %}
+                                                </div>
+
+                                                <div class="context-group context-group-last">
+                                                    <strong class="context-label">추천 답변 예시</strong>
+                                                    <div class="context-answer-text">
+                                                        {{ item.context_feedback.revised_answer or "추천 답변 예시가 없습니다." }}
+                                                    </div>
+                                                </div>
+                                            </div>
                                         {% else %}
-                                        컨텍스트 피드백 LLM은 아직 연결하지 않았습니다.
+                                            컨텍스트 분석 데이터가 아직 없습니다.
                                         {% endif %}
                                     </div>
                                 </section>

@@ -40,7 +40,7 @@ function submitAnswers() {
     const $btn = $(".submit-btn");
     $btn.prop("disabled", true).text("분석 중...");
 
-    fetch(`/api/interviews/${sessionId}/submit-analysis/start`, {
+    fetch(`/interviews/${sessionId}/submit-analysis/start`, {
         method: "POST",
     })
         .then(async (response) => {

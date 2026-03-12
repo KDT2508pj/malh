@@ -2,6 +2,7 @@
 import threading
 import time
 import logging
+import json
 from typing import List
 
 from fastapi import (
@@ -453,6 +454,25 @@ def _score_tone(score: int) -> str:
     if score < 80:
         return "mid"
     return "high"
+
+def _safe_json_list(value):
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return value
+    if isinstance(value, str):
+        value = value.strip()
+        if not value:
+            return []
+        try:
+            parsed = json.loads(value)
+            return parsed if isinstance(parsed, list) else []
+        except json.JSONDecodeError:
+            return []
+    return []
+
+def _safe_text(value: str | None) -> str:
+    return " ".join((value or "").strip().split())
 
 
 def _load_analysis_bundle(db: Session, session_id: int, sel_id: int):
@@ -1564,6 +1584,19 @@ async def result_index(
             AudioRecording.recording_id.label("recording_id"),
             SpeechScoreSummary.score_id.label("speech_score_id"),
             AnswerAnalysis.anal_id.label("answer_analysis_id"),
+
+            AnswerAnalysis.anal_overall_score.label("overall_score"),
+            AnswerAnalysis.anal_overall_comment.label("overall_comment"),
+            AnswerAnalysis.anal_revised_answer.label("revised_answer"),
+
+            AnswerAnalysis.anal_relevance_reason.label("relevance_reason"),
+            AnswerAnalysis.anal_coverage_reason.label("coverage_reason"),
+            AnswerAnalysis.anal_specificity_reason.label("specificity_reason"),
+            AnswerAnalysis.anal_evidence_reason.label("evidence_reason"),
+            AnswerAnalysis.anal_consistency_reason.label("consistency_reason"),
+
+            AnswerAnalysis.anal_good_points.label("good_points"),
+            AnswerAnalysis.anal_improvement_points.label("improvement_points"),
         )
         .join(Question, Question.qust_id == SelectQuestion.qust_id)
         .outerjoin(AudioRecording, AudioRecording.sel_id == SelectQuestion.sel_id)
@@ -1574,22 +1607,76 @@ async def result_index(
         .all()
     )
 
-    result_items = [
-        {
-            "sel_id": row.sel_id,
-            "sel_order_no": row.sel_order_no,
-            "question_text": row.question_text,
-            "duration_sec": int(
-                row.recorded_duration_sec
-                if row.recorded_duration_sec is not None
-                else (row.sel_duration_sec or 0)
-            ),
-            "is_recorded": row.recording_id is not None,
-            "speech_ready": row.speech_score_id is not None,
-            "context_ready": row.answer_analysis_id is not None,
-        }
-        for row in rows
-    ]
+    result_items = []
+    for row in rows:
+        context_feedback = None
+
+        if row.answer_analysis_id is not None:
+            raw_good_points = _safe_json_list(row.good_points)
+            raw_improvement_points = _safe_json_list(row.improvement_points)
+
+            context_feedback = {
+                "overall_score": int(row.overall_score or 0),
+                "overall_comment": _safe_text(row.overall_comment),
+                "revised_answer": _safe_text(row.revised_answer),
+                "reason_rows": [
+                    {
+                        "label": "질문 적합성",
+                        "text": _safe_text(row.relevance_reason),
+                    },
+                    {
+                        "label": "답변 충실도",
+                        "text": _safe_text(row.coverage_reason),
+                    },
+                    {
+                        "label": "구체성",
+                        "text": _safe_text(row.specificity_reason),
+                    },
+                    {
+                        "label": "근거 제시",
+                        "text": _safe_text(row.evidence_reason),
+                    },
+                    {
+                        "label": "이력서 정합성",
+                        "text": _safe_text(row.consistency_reason),
+                    },
+                ],
+                "good_points": [
+                    {
+                        "title": _safe_text(item.get("title")),
+                        "detail": _safe_text(item.get("detail")),
+                        "metric": _safe_text(item.get("metric")),
+                    }
+                    for item in raw_good_points
+                    if isinstance(item, dict)
+                ],
+                "improvement_points": [
+                    {
+                        "title": _safe_text(item.get("title")),
+                        "detail": _safe_text(item.get("detail")),
+                        "metric": _safe_text(item.get("metric")),
+                    }
+                    for item in raw_improvement_points
+                    if isinstance(item, dict)
+                ],
+            }
+
+        result_items.append(
+            {
+                "sel_id": row.sel_id,
+                "sel_order_no": row.sel_order_no,
+                "question_text": row.question_text,
+                "duration_sec": int(
+                    row.recorded_duration_sec
+                    if row.recorded_duration_sec is not None
+                    else (row.sel_duration_sec or 0)
+                ),
+                "is_recorded": row.recording_id is not None,
+                "speech_ready": row.speech_score_id is not None,
+                "context_ready": row.answer_analysis_id is not None,
+                "context_feedback": context_feedback,
+            }
+        )
 
     weakness_top3 = get_session_weakness_top3(
         db=db,
@@ -1810,7 +1897,7 @@ async def weakness_report_loading(
 
 
 @web_router.post(
-    "/api/interviews/{inter_id}/weakness/report/start",
+    "/interviews/{inter_id}/weakness/report/start",
     status_code=status.HTTP_202_ACCEPTED,
 )
 async def start_weakness_report_job(
@@ -1865,7 +1952,7 @@ async def start_weakness_report_job(
 
 
 @web_router.get(
-    "/api/interviews/{inter_id}/weakness/report/progress",
+    "/interviews/{inter_id}/weakness/report/progress",
     status_code=status.HTTP_200_OK,
 )
 async def get_weakness_report_progress(
@@ -2030,7 +2117,7 @@ async def account_withdraw(request: Request):
 
 
 @web_router.post(
-    "/api/interviews/{inter_id}/questions/{sel_id}/recordings",
+    "/interviews/{inter_id}/questions/{sel_id}/recordings",
     status_code=status.HTTP_201_CREATED,
 )
 async def upload_recording(
@@ -2092,7 +2179,7 @@ async def upload_recording(
 
 
 @web_router.post(
-    "/api/interviews/{inter_id}/questions/{sel_id}/stt",
+    "/interviews/{inter_id}/questions/{sel_id}/stt",
     status_code=status.HTTP_200_OK,
 )
 async def run_stt(
@@ -2140,7 +2227,7 @@ async def run_stt(
 
 
 @web_router.post(
-    "/api/interviews/{inter_id}/questions/{sel_id}/speech-score",
+    "/interviews/{inter_id}/questions/{sel_id}/speech-score",
     status_code=status.HTTP_200_OK,
 )
 async def build_speech_score(
@@ -2194,7 +2281,7 @@ async def build_speech_score(
 
 
 @web_router.post(
-    "/api/interviews/{inter_id}/submit-analysis",
+    "/interviews/{inter_id}/submit-analysis",
     status_code=status.HTTP_200_OK,
 )
 async def submit_interview_analysis(
@@ -2278,6 +2365,13 @@ async def submit_interview_analysis(
         )
         upsert_speech_summary(db=db, sel_id=int(row.sel_id), score=score_payload)
         upsert_speech_detail(db=db, sel_id=int(row.sel_id), score=score_payload)
+
+        analyze_answer_by_sel_id(
+            db=db,
+            sel_id=int(row.sel_id),
+            model="gpt-4o-mini",
+        )
+        
         processed.append(
             {
                 "sel_id": int(row.sel_id),
@@ -2302,7 +2396,7 @@ async def submit_interview_analysis(
 
 
 @web_router.post(
-    "/api/interviews/{inter_id}/submit-analysis/start",
+    "/interviews/{inter_id}/submit-analysis/start",
     status_code=status.HTTP_202_ACCEPTED,
 )
 async def start_submit_analysis_job(
@@ -2355,7 +2449,7 @@ async def start_submit_analysis_job(
 
 
 @web_router.get(
-    "/api/interviews/{inter_id}/submit-analysis/progress",
+    "/interviews/{inter_id}/submit-analysis/progress",
     status_code=status.HTTP_200_OK,
 )
 async def get_submit_analysis_progress(
@@ -2397,7 +2491,7 @@ async def get_submit_analysis_progress(
 
 
 @web_router.get(
-    "/api/interviews/{inter_id}/questions/{sel_id}/speech-feedback",
+    "/interviews/{inter_id}/questions/{sel_id}/speech-feedback",
     status_code=status.HTTP_200_OK,
 )
 async def get_speech_feedback_payload(
@@ -2434,7 +2528,7 @@ async def get_speech_feedback_payload(
 
 
 @web_router.post(
-    "/api/interviews/{inter_id}/questions/{sel_id}/speech-feedback",
+    "/interviews/{inter_id}/questions/{sel_id}/speech-feedback",
     status_code=status.HTTP_200_OK,
 )
 async def build_speech_feedback(
@@ -2505,7 +2599,7 @@ async def build_speech_feedback(
 
 
 @web_router.post(
-    "/api/interviews/{inter_id}/questions/{sel_id}/speech-feedback/stream",
+    "/interviews/{inter_id}/questions/{sel_id}/speech-feedback/stream",
     status_code=status.HTTP_200_OK,
 )
 async def build_speech_feedback_stream(
@@ -2577,7 +2671,7 @@ async def build_speech_feedback_stream(
 
 
 @web_router.post(
-    "/api/interviews/{inter_id}/questions/{sel_id}/transcript/refine",
+    "/interviews/{inter_id}/questions/{sel_id}/transcript/refine",
     status_code=status.HTTP_200_OK,
 )
 async def refine_transcript(
@@ -2640,7 +2734,7 @@ async def refine_transcript(
 
 
 @web_router.get(
-    "/api/interviews/{inter_id}/questions/{sel_id}/transcript",
+    "/interviews/{inter_id}/questions/{sel_id}/transcript",
     status_code=status.HTTP_200_OK,
 )
 async def get_transcript_payload(

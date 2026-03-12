@@ -43,7 +43,7 @@ $(function () {
         }
 
         const response = await fetch(
-            `/api/interviews/${context.sessionId}/questions/${context.selId}/stt`,
+            `/interviews/${context.sessionId}/questions/${context.selId}/stt`,
             { method: "POST" },
         );
         if (!response.ok) {

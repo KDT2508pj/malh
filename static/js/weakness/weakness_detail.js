@@ -120,7 +120,7 @@ async function uploadRecordedAudio(blob) {
     formData.append("audio_file", file);
     formData.append("duration_sec", String(seconds));
 
-    const response = await fetch(`/api/interviews/${sessionId}/questions/${questionId}/recordings`, {
+    const response = await fetch(`/interviews/${sessionId}/questions/${questionId}/recordings`, {
         method: "POST",
         body: formData,
     });
