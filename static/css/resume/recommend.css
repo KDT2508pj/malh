@@ -44,12 +44,47 @@ select:focus, input:focus { border-color: var(--primary-navy); }
 .score-value { font-size: 72px; font-weight: 900; color: var(--primary-navy); }
 .score-value span { font-size: 24px; font-weight: 700; margin-left: 5px; }
 
-.feedback-box { padding: 25px; border-radius: 16px; margin-bottom: 20px; }
-.feedback-box h4 { font-size: 18px; font-weight: 700; margin-bottom: 12px; }
-.feedback-box p { font-size: 16px; line-height: 1.7; color: #444; }
+.feedback-box {
+    padding: 25px;
+    border-radius: 16px;
+    margin-bottom: 20px;
+    background-color: #fff;
+    border: 1px solid #ddd;
+    color: #111;
+}
 
-.feedback-box.good { background-color: #f0fdf4; border: 1px solid #dcfce7; color: #166534; }
-.feedback-box.bad { background-color: #fef2f2; border: 1px solid #fee2e2; color: #991b1b; }
+.feedback-box h4 {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 12px;
+    color: #111;
+}
+
+.feedback-box p {
+    font-size: 16px;
+    line-height: 1.7;
+    color: #111;
+}
+
+.feedback-box.good,
+.feedback-box.bad {
+    background-color: #fff;
+    border: 1px solid #ddd;
+    color: #111;
+}
+
+.warning-box {
+    margin-bottom: 20px;
+}
+
+.warning-box h4,
+.warning-box p {
+    margin: 0;
+}
+
+.warning-box h4 {
+    margin-bottom: 12px;
+}
 
 .btn-group { display: flex; gap: 15px; margin-top: 40px; }
 .btn { flex: 1; height: 55px; border-radius: 12px; font-size: 17px; font-weight: 700; cursor: pointer; border: none; }
