@@ -6,9 +6,30 @@ from sqlalchemy.orm import Session
 from sqlalchemy.sql import func
 
 from core.database import get_db, SessionLocal, session_scope
-from models.resume import Resume
-
 from core.config import settings
+
+from models.resume import Resume
+from models.interview_session import InterviewSession
+from models.select_question import SelectQuestion
+from models.question import Question
+from models.question_set import QuestionSet
+from models.question_filter_result import QuestionFilterResult
+
+from services.resume_service import (
+    analyze_saved_resume, update_resume_status, create_resume_record,
+    get_resume_analysis_result, delete_resume
+)
+from services.question_service import (
+    ensure_questions_generated_for_resume, generate_questions_for_resume,
+    get_latest_completed_question_set
+)
+from services.analysis_service import get_session_score
+from services.weakness_service import get_session_weakness_top3
+
+from web.common import (
+    templates, logger, DEFAULT_MODEL, RUNNING_RESUME_STATUSES, RESUME_PROGRESS_MAP,
+    _get_login_user, _get_owned_resume, _get_latest_session_id_by_resume
+)
 
 router = APIRouter()
 

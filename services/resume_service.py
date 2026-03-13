@@ -49,6 +49,8 @@ from services.prompt.resume.structure_prompt import (
 )
 from core.config import settings
 
+DEFAULT_MODEL = settings.OPENAI_MODEL
+
 logger = logging.getLogger(__name__)
 
 def update_resume_status(
