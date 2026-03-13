@@ -16,3 +16,4 @@ faster-whisper
 cryptography
 beautifulsoup4
 requests
+ffmpeg

@@ -1,47 +1,60 @@
+name: malh
+
 services:
   db:
     image: mysql:8.0
-    container_name: interview-db
-    restart: always
+    container_name: malh-db
+    restart: unless-stopped
     environment:
-      MYSQL_DATABASE: interview_db
-      MYSQL_USER: interview_user
-      MYSQL_PASSWORD: interview_pass
+      MYSQL_DATABASE: malh
+      MYSQL_USER: malh_user
+      MYSQL_PASSWORD: malh_pass
       MYSQL_ROOT_PASSWORD: root_pass
-    ports:
-      - "3306:3306"
+      TZ: Asia/Seoul
     volumes:
-      - mysql_data:/var/lib/mysql
-    networks:
-      - interview-network
+      - malh_mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -proot_pass || exit 1"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
+      start_period: 20s
 
   app:
-    build: .
-    container_name: interview-app
-    restart: always
+    build:
+      context: .
+    container_name: malh-app
+    restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
     env_file:
       - .env
     environment:
-      - DATABASE_URL=mysql+pymysql://interview_user:interview_pass@db:3306/interview_db?charset=utf8mb4
-    ports:
-      - "8000:8000"
+      DATABASE_URL: mysql+pymysql://malh_user:malh_pass@db:3306/malh?charset=utf8mb4
+      TZ: Asia/Seoul
+    expose:
+      - "8000"
     volumes:
       - ./storage:/app/storage
       - ./uploads:/app/uploads
-    networks:
-      - interview-network
 
-networks:
-  interview-network:
-    driver: bridge
+  caddy:
+    image: caddy:2
+    container_name: malh-caddy
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "18080:80/tcp"
+      - "18443:443/tcp"
+      - "18443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
 
 volumes:
-  mysql_data:
+  malh_mysql_data:
+  caddy_data:
+  caddy_config:
