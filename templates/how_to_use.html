@@ -60,8 +60,8 @@
             <a href="/resumes" class="cta">모의면접 시작하기</a>
             <a href="/feedback" class="cta">이력서 피드백 시작하기</a>
             {% else %}
-            <a href="/auth/login" class="cta">모의면접 시작하기</a>
-            <a href="/auth/login" class="cta">이력서 피드백 시작하기</a>
+            <a href="/auth/login" class="cta" onclick="alert('로그인이 필요한 서비스입니다.');">모의면접 시작하기</a>
+            <a href="/auth/login" class="cta" onclick="alert('로그인이 필요한 서비스입니다.');">이력서 피드백 시작하기</a>
             {% endif %}
         </div>
     </div>
