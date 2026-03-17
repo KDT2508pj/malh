@@ -34,7 +34,7 @@ from core.database import SessionLocal
 from core.exceptions import BaseAPIException
 from core.logging import setup_logging
 from services.feedback_service import router as feedback_router
-from services.interview_cleanup_service import cleanup_stale_in_progress_session_audio
+from services.interview_cleanup_service import cleanup_expired_interview_audio
 from services.member_service import router as member_router
 from services.storage_cleanup_service import prune_empty_audio_tree
 from web.router import web_router
@@ -52,15 +52,17 @@ def cleanup_stale_interview_audio_once() -> None:
         stale_before = datetime.now() - timedelta(
             seconds=settings.INTERVIEW_AUDIO_STALE_TTL_SEC
         )
-        summary = cleanup_stale_in_progress_session_audio(
+        summary = cleanup_expired_interview_audio(
             db=db,
             stale_before=stale_before,
         )
-        if summary["stale_sessions"] > 0:
+        if summary["stale_in_progress_sessions"] > 0 or summary["expired_done_sessions"] > 0:
             logger.info(
-                "STALE_AUDIO_CLEANUP sessions=%s removed_audio=%s removed_files=%s",
-                summary["stale_sessions"],
-                summary["removed_audio"],
+                "INTERVIEW_AUDIO_CLEANUP stale_in_progress=%s expired_done=%s removed_audio_rows=%s cleared_audio_rows=%s removed_files=%s",
+                summary["stale_in_progress_sessions"],
+                summary["expired_done_sessions"],
+                summary["removed_audio_rows"],
+                summary["cleared_audio_rows"],
                 summary["removed_files"],
             )
     except Exception:

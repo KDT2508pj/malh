@@ -43,6 +43,8 @@ DEFAULT_MODEL = settings.OPENAI_MODEL
 SUBMIT_ANALYSIS_PROGRESS: dict[int, dict[str, object]] = {}
 SUBMIT_ANALYSIS_LOCK = threading.Lock()
 SUBMIT_ANALYSIS_TIMEOUT_SEC = settings.ANALYSIS_TIMEOUT_SEC
+QUESTION_ANALYSIS_PROGRESS: dict[tuple[int, int], dict[str, object]] = {}
+QUESTION_ANALYSIS_LOCK = threading.Lock()
 
 WEAKNESS_REPORT_PROGRESS: dict[int, dict[str, object]] = {}
 WEAKNESS_REPORT_CACHE: dict[int, dict[str, object]] = {}
@@ -177,6 +179,85 @@ def _update_submit_progress(inter_id: int, **fields: object) -> None:
         if base.get("done"): return
         base.update(fields)
         SUBMIT_ANALYSIS_PROGRESS[inter_id] = base
+
+def _question_progress_key(inter_id: int, sel_id: int) -> tuple[int, int]:
+    return inter_id, sel_id
+
+def _update_question_analysis_progress(inter_id: int, sel_id: int, **fields: object) -> None:
+    key = _question_progress_key(inter_id, sel_id)
+    with QUESTION_ANALYSIS_LOCK:
+        base = QUESTION_ANALYSIS_PROGRESS.get(key, {})
+        if base.get("done") and fields.get("status") == "running":
+            base = {}
+        base.update(fields)
+        QUESTION_ANALYSIS_PROGRESS[key] = base
+
+def _get_question_analysis_progress(inter_id: int, sel_id: int) -> dict[str, object]:
+    key = _question_progress_key(inter_id, sel_id)
+    with QUESTION_ANALYSIS_LOCK:
+        return dict(QUESTION_ANALYSIS_PROGRESS.get(key, {}))
+
+def _wait_for_question_analysis(db: Session, inter_id: int, sel_id: int, timeout_sec: float) -> bool:
+    deadline = time.monotonic() + max(0.5, timeout_sec)
+    while time.monotonic() < deadline:
+        db.expire_all()
+        if _is_question_analysis_complete(db=db, sel_id=sel_id):
+            return True
+        progress = _get_question_analysis_progress(inter_id, sel_id)
+        if progress.get("done"):
+            return bool(progress.get("ok")) and _is_question_analysis_complete(db=db, sel_id=sel_id)
+        time.sleep(0.25)
+    return False
+
+def _is_question_analysis_complete(db: Session, sel_id: int) -> bool:
+    row = (
+        db.query(
+            Transcript.transcript_id.label("transcript_id"),
+            SpeechScoreSummary.score_id.label("score_id"),
+            SpeechScoreDetail.detail_id.label("detail_id"),
+            AnswerAnalysis.anal_id.label("anal_id"),
+        )
+        .select_from(SelectQuestion)
+        .outerjoin(Transcript, Transcript.sel_id == SelectQuestion.sel_id)
+        .outerjoin(SpeechScoreSummary, SpeechScoreSummary.sel_id == SelectQuestion.sel_id)
+        .outerjoin(SpeechScoreDetail, SpeechScoreDetail.sel_id == SelectQuestion.sel_id)
+        .outerjoin(AnswerAnalysis, AnswerAnalysis.sel_id == SelectQuestion.sel_id)
+        .filter(SelectQuestion.sel_id == sel_id)
+        .first()
+    )
+    if not row:
+        return False
+    return all(
+        (
+            row.transcript_id is not None,
+            row.score_id is not None,
+            row.detail_id is not None,
+            row.anal_id is not None,
+        )
+    )
+
+def _refresh_session_status_if_ready(db: Session, inter_id: int) -> bool:
+    rows = (
+        db.query(
+            SelectQuestion.sel_id.label("sel_id"),
+            AudioRecording.recording_id.label("recording_id"),
+        )
+        .outerjoin(AudioRecording, AudioRecording.sel_id == SelectQuestion.sel_id)
+        .filter(SelectQuestion.inter_id == inter_id)
+        .all()
+    )
+    if not rows or any(row.recording_id is None for row in rows):
+        return False
+    if any(not _is_question_analysis_complete(db=db, sel_id=int(row.sel_id)) for row in rows):
+        return False
+
+    session = db.query(InterviewSession).filter(InterviewSession.inter_id == inter_id).first()
+    if not session:
+        return False
+    session.inter_status = "DONE"
+    session.inter_finished_at = func.now()
+    db.commit()
+    return True
 
 def _update_weakness_report_progress(inter_id: int, **fields: object) -> None:
     with WEAKNESS_REPORT_LOCK:

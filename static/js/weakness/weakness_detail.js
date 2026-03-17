@@ -21,14 +21,29 @@ let smoothedLevels = [];
 const QUESTION_PREVIEW_SECONDS = 5;
 const QUESTION_PREVIEW_MAX_COUNT = 2;
 
-function getSessionIdFromPath() {
+function getSessionId() {
     const match = window.location.pathname.match(/\/interviews\/(\d+)/);
-    return match ? Number(match[1]) : 0;
+    if (match) {
+        return Number(match[1]);
+    }
+
+    const weaknessContext = window.WEAKNESS_CONTEXT || {};
+    return Number(weaknessContext.sessionId || 0);
 }
 
-function getQuestionIdFromPath() {
+function getQuestionId() {
     const match = window.location.pathname.match(/\/weakness\/(\d+)/);
-    return match ? Number(match[1]) : 0;
+    if (match) {
+        return Number(match[1]);
+    }
+
+    const weaknessContext = window.WEAKNESS_CONTEXT || {};
+    return Number(weaknessContext.selId || 0);
+}
+
+function isAlreadyRecorded() {
+    const weaknessContext = window.WEAKNESS_CONTEXT || {};
+    return Boolean(weaknessContext.isRecorded);
 }
 
 function sleep(ms) {
@@ -49,7 +64,7 @@ function updatePreviewStatusUI() {
 
     const remain = remainingPreviewCount();
     const recordingText = remain > 0
-        ? `녹음 중 질문 다시보기 가능: ${remain}회 남음`
+        ? `녹음 중 질문 다시보기 가능 횟수: ${remain}회`
         : "질문 다시보기 사용 횟수를 모두 사용했습니다.";
     $("#recording-placeholder").text(recordingText);
 
@@ -85,13 +100,13 @@ async function runQuestionPreview(targetMode) {
     updatePreviewStatusUI();
 
     if (isRecordingMode) {
-        $countdown.text("질문을 다시 숨깁니다.");
+        $countdown.text("질문이 다시 숨겨집니다.");
         await sleep(300);
         if (remainingPreviewCount() > 0) {
             $countdown.text("");
         }
     } else {
-        $countdown.text("녹음을 시작합니다...");
+        $countdown.text("녹음을 시작합니다.");
         await sleep(250);
     }
 
@@ -110,8 +125,8 @@ function pickSupportedMimeType() {
 }
 
 async function uploadRecordedAudio(blob) {
-    const sessionId = getSessionIdFromPath();
-    const questionId = getQuestionIdFromPath();
+    const sessionId = getSessionId();
+    const questionId = getQuestionId();
     const ext = blob.type.includes("mp4") ? "m4a" : "webm";
     const fileName = `answer.${ext}`;
     const file = new File([blob], fileName, { type: blob.type || "audio/webm" });
@@ -221,12 +236,17 @@ function startVisualizer(stream) {
 }
 
 async function startInterviewFlow() {
+    const sessionId = getSessionId();
+    const questionId = getQuestionId();
+
     if (isRecording || isPreparing) {
         return;
     }
-
-    const sessionId = getSessionIdFromPath();
-    const questionId = getQuestionIdFromPath();
+    if (isAlreadyRecorded()) {
+        alert("이미 녹음이 완료된 질문입니다. 재녹음은 지원하지 않습니다.");
+        window.location.href = `/interviews/${sessionId}/weakness`;
+        return;
+    }
     if (!sessionId || !questionId) {
         alert("면접 정보가 올바르지 않습니다.");
         return;
@@ -256,7 +276,7 @@ async function startInterviewFlow() {
         };
 
         if (remainingPreviewCount() > 0) {
-            setStandbyMessage("질문을 확인하세요.");
+            setStandbyMessage("질문을 확인해 주세요.");
             await runQuestionPreview("standby");
         } else {
             $("#preview-countdown").text("질문 미리보기 2회를 모두 사용했습니다.");
@@ -277,7 +297,7 @@ async function startInterviewFlow() {
         cleanupStream();
         mediaRecorder = null;
         alert("마이크 권한이 필요합니다.");
-        setStandbyMessage("시작 시 질문을 5초 보여준 뒤 녹음이 시작됩니다.");
+        setStandbyMessage("시작 후 질문을 5초 보여주고 녹음을 시작합니다.");
         $("#preview-countdown").text("");
     } finally {
         isPreparing = false;
@@ -296,10 +316,6 @@ async function reviewQuestionDuringRecording() {
     }
 
     await runQuestionPreview("recording");
-}
-
-function startRecordingFlow() {
-    return startInterviewFlow();
 }
 
 function startTimer() {
@@ -323,11 +339,12 @@ function stopTimer() {
 }
 
 function finishRecording() {
+    const sessionId = getSessionId();
+
     if (!isRecording || !mediaRecorder) {
         return;
     }
 
-    const sessionId = getSessionIdFromPath();
     isRecording = false;
     stopTimer();
     stopVisualizer();
@@ -337,10 +354,8 @@ function finishRecording() {
             const type = mediaRecorder.mimeType || "audio/webm";
             const blob = new Blob(recordedChunks, { type });
             await uploadRecordedAudio(blob);
-            alert("녹음이 저장되었습니다.");
-            if (sessionId) {
-                window.location.href = `/interviews/${sessionId}/weakness`;
-            }
+            alert("녹음이 저장되었습니다. 백그라운드 분석을 시작합니다.");
+            window.location.href = `/interviews/${sessionId}/weakness`;
         } catch (error) {
             alert(error.message || "녹음 저장에 실패했습니다.");
             $("#mode-recording").removeClass("active");
@@ -358,4 +373,9 @@ function finishRecording() {
 
 $(function () {
     updatePreviewStatusUI();
+    if (isAlreadyRecorded()) {
+        $("#start-interview-btn").prop("disabled", true);
+        $("#review-question-btn").prop("disabled", true);
+        $("#preview-countdown").text("이미 녹음이 완료된 질문입니다.");
+    }
 });

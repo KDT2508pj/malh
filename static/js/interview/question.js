@@ -12,10 +12,8 @@ function goToDetail(selId, isRecorded = false) {
         return;
     }
     if (isRecorded) {
-        const shouldRerecord = confirm("이미 녹음이 완료된 질문입니다. 재녹음하시겠습니까?");
-        if (!shouldRerecord) {
-            return;
-        }
+        alert("이미 녹음이 완료된 질문입니다. 재녹음은 지원하지 않습니다.");
+        return;
     }
     location.href = `/interviews/${sessionId}/questions/${selId}`;
 }
@@ -38,7 +36,7 @@ function submitAnswers() {
     }
 
     const $btn = $(".submit-btn");
-    $btn.prop("disabled", true).text("분석 중...");
+    $btn.prop("disabled", true).text("분석 확인 중..");
 
     fetch(`/interviews/${sessionId}/submit-analysis/start`, {
         method: "POST",

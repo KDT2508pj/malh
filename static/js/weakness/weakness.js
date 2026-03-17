@@ -9,20 +9,21 @@ function getSessionIdFromPath() {
 
 function goToWeaknessDetail(id, isRecorded = false) {
     const sessionId = getSessionIdFromPath();
-    if (!sessionId || !id) return;
-    if (isRecorded) {
-        const shouldRerecord = confirm("이미 답변완료 한 질문입니다. 재녹음 하시겠습니까?");
-        if (!shouldRerecord) {
-            return;
-        }
+    if (!sessionId || !id) {
+        return;
     }
-    $(location).attr("href", `/interviews/${sessionId}/weakness/${id}`);
+    if (isRecorded) {
+        alert("이미 녹음이 완료된 질문입니다. 재녹음은 지원하지 않습니다.");
+        return;
+    }
+    location.href = `/interviews/${sessionId}/weakness/${id}`;
 }
 
 function completeReinforcement() {
     const sessionId = getSessionIdFromPath();
-    if (!sessionId) return;
-    
-    $(location).attr("href", `/interviews/${sessionId}/weakness/report-loading`);
-    
+    if (!sessionId) {
+        return;
+    }
+
+    location.href = `/interviews/${sessionId}/weakness/report-loading`;
 }
