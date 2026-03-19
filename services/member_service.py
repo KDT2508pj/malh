@@ -169,9 +169,5 @@ def withdraw_user(
 # =====================================================
 @router.get("/resume/feedback")
 def feedback_page(request: Request, db: Session = Depends(get_db)):
-    user_id = request.cookies.get("login_user")
-    if not user_id:
-        return RedirectResponse(url="/auth/login", status_code=status.HTTP_303_SEE_OTHER)
-        
-    resumes = [] 
+    resumes = []
     return templates.TemplateResponse("feedback.html", {"request": request, "resumes": resumes})
