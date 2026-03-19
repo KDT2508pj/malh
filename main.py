@@ -8,7 +8,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -45,6 +45,8 @@ templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 setup_logging()
 logger = logging.getLogger(__name__)
 
+
+WHITE_LIST = ["/auth/login", "/auth/signup", "/auth/check-id", "/static", "/storage", "/health", "/"]
 
 def cleanup_stale_interview_audio_once() -> None:
     db = SessionLocal()
@@ -155,6 +157,19 @@ def register_exception_handlers(app: FastAPI) -> None:
                 "errors": exc.errors(),
             },
         )
+    
+def register_middleware(app: FastAPI) -> None:
+    @app.middleware("http")
+    async def auth_check_middleware(request: Request, call_next):
+        login_user = request.cookies.get("login_user")
+        current_path = request.url.path
+
+        # 화이트리스트 외의 경로에 로그인 없이 접근 시 튕겨냄
+        if not login_user and not any(current_path.startswith(p) for p in WHITE_LIST):
+            return RedirectResponse(url="/auth/login?reason=timeout", status_code=status.HTTP_303_SEE_OTHER)
+
+        response = await call_next(request)
+        return response
 
 
 def create_app() -> FastAPI:
@@ -165,6 +180,7 @@ def create_app() -> FastAPI:
     )
 
     register_exception_handlers(app)
+    register_middleware(app)
 
     static_dir = BASE_DIR / "static"
     static_dir.mkdir(parents=True, exist_ok=True)

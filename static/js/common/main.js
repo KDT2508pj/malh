@@ -37,5 +37,21 @@
     window.addEventListener("resize", () => {
         if (window.innerWidth > 992) closeMenu();
     });
+
+    const TIMEOUT_MS = 3600 * 1000;
+    const isLogin = document.querySelector(".logout-link");
+
+    if (isLogin) {
+        setTimeout(() => {
+            alert("장시간 이용하지 않아 로그아웃됩니다.");
+            location.href = "/auth/logout";
+        }, TIMEOUT_MS);
+    }
+
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('reason') === 'timeout') {
+        alert("장시간 이용하지 않아 로그아웃되었습니다.");
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
 })();
 
